@@ -1,0 +1,284 @@
+---
+title: Volume Management
+description: Manage persistent storage and data volumes for your containers
+---
+
+Container Kit provides volume management capabilities for persistent data storage in macOS containers. Volumes allow you to persist data beyond the container lifecycle and share data between containers.
+
+## Overview
+
+Volumes in Container Kit integrate with Apple's container system to provide persistent storage solutions. Unlike container filesystems, volumes persist even when containers are removed, making them ideal for databases, application data, and shared resources.
+
+## Volume Concepts
+
+### What are Volumes?
+
+Volumes are directories or storage locations that exist outside the container's filesystem. They provide:
+
+- **Persistence** - Data survives container removal
+- **Sharing** - Multiple containers can mount the same volume
+- **Performance** - Direct host filesystem access
+- **Isolation** - Separate data from container lifecycle
+
+<Info>
+  Volumes are managed by the container runtime and are independent of the container's writable layer.
+</Info>
+
+## Working with Volumes
+
+### Container Mounts
+
+Volumes are specified in the container configuration:
+
+```typescript
+type ContainerConfiguration = {
+  // ... other fields
+  mounts: string[];  // Volume mount points
+};
+```
+
+### Inspecting Volume Mounts
+
+View volumes attached to a container:
+
+```typescript
+import { inspectContainer } from '$lib/services/containerization/containers';
+
+const result = await inspectContainer('container-id');
+
+if (!result.error) {
+  const config = JSON.parse(result.stdout);
+  console.log('Mounted volumes:', config.configuration.mounts);
+}
+```
+
+## Volume Use Cases
+
+<Tabs>
+  <Tab title="Database Storage">
+    Persist database data across container restarts:
+
+    ```typescript
+    // Container with database volume mount
+    // Volume typically mounted at /var/lib/postgresql/data
+    // or /var/lib/mysql depending on database type
+    
+    const result = await inspectContainer('postgres-container');
+    const config = JSON.parse(result.stdout);
+    
+    // Check mount points for data directory
+    console.log('Data mounts:', config.configuration.mounts);
+    ```
+
+    <Note>
+      Database volumes ensure data persistence even when containers are recreated or upgraded.
+    </Note>
+  </Tab>
+
+  <Tab title="Application Data">
+    Store application configuration and user data:
+
+    ```typescript
+    // Application containers with persistent config
+    // Mounts typically include:
+    // - /app/config
+    // - /app/data
+    // - /app/logs
+    
+    const result = await inspectContainer('app-container');
+    const mounts = JSON.parse(result.stdout).configuration.mounts;
+    
+    mounts.forEach(mount => {
+      console.log('Mount point:', mount);
+    });
+    ```
+  </Tab>
+
+  <Tab title="Shared Resources">
+    Share data between multiple containers:
+
+    ```typescript
+    // Multiple containers can mount the same volume
+    // Useful for:
+    // - Shared configuration files
+    // - Inter-container communication
+    // - Log aggregation
+    
+    const containers = ['web-1', 'web-2', 'web-3'];
+    
+    for (const containerId of containers) {
+      const result = await inspectContainer(containerId);
+      const config = JSON.parse(result.stdout);
+      console.log(`${containerId} mounts:`, config.configuration.mounts);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Volume Patterns
+
+### Named Volumes vs Bind Mounts
+
+<Card title="Named Volumes" icon="database">
+  Managed by the container runtime, stored in system-controlled locations. Best for persistent application data.
+</Card>
+
+<Card title="Bind Mounts" icon="folder">
+  Direct mounts of host directories. Best for development and accessing specific host paths.
+</Card>
+
+### Common Mount Points
+
+Typical volume mount locations:
+
+```typescript
+const commonMountPoints = {
+  // Database volumes
+  postgres: '/var/lib/postgresql/data',
+  mysql: '/var/lib/mysql',
+  mongodb: '/data/db',
+  redis: '/data',
+  
+  // Application volumes
+  config: '/app/config',
+  data: '/app/data',
+  logs: '/app/logs',
+  cache: '/app/cache',
+  
+  // Web server volumes
+  nginx: '/usr/share/nginx/html',
+  apache: '/var/www/html',
+};
+```
+
+## Volume Lifecycle
+
+### Volume Persistence
+
+Volumes persist independently of containers:
+
+```typescript
+import { removeContainer, inspectContainer } from '$lib/services/containerization/containers';
+
+// Before removal - check volume mounts
+const beforeResult = await inspectContainer('my-container');
+const mounts = JSON.parse(beforeResult.stdout).configuration.mounts;
+console.log('Volumes before removal:', mounts);
+
+// Remove container
+await removeContainer('my-container');
+
+// Volumes still exist and can be mounted to new containers
+// Data is preserved
+```
+
+<Info>
+  Removing a container does NOT remove its volumes. This ensures data safety and allows for container recreation without data loss.
+</Info>
+
+## Container Working Directory
+
+The init process includes a working directory setting:
+
+```typescript
+type ContainerInitProcess = {
+  // ... other fields
+  workingDirectory: string;  // Container's working directory
+  executable: string;
+  arguments: string[];
+  environment: string[];
+};
+```
+
+Access working directory information:
+
+```typescript
+const result = await inspectContainer('container-id');
+const config = JSON.parse(result.stdout);
+const workDir = config.configuration.initProcess.workingDirectory;
+
+console.log('Working directory:', workDir);
+```
+
+## Best Practices
+
+### Data Management
+
+- Use volumes for all persistent data
+- Don't store data in the container's writable layer
+- Use specific mount points for different data types
+- Document volume requirements for your containers
+
+### Performance
+
+- Use volumes for frequently accessed data
+- Avoid excessive bind mounts
+- Consider volume performance for database workloads
+- Monitor volume usage and capacity
+
+### Security
+
+- Limit volume access permissions
+- Use read-only mounts when appropriate
+- Avoid mounting sensitive host directories
+- Regularly backup critical volume data
+
+## Volume Backup Strategies
+
+### Export Container with Volumes
+
+Backup container configuration including mount information:
+
+```typescript
+import { inspectContainer } from '$lib/services/containerization/containers';
+import { writeFile } from 'fs/promises';
+
+const result = await inspectContainer('important-container');
+
+if (!result.error) {
+  const config = JSON.parse(result.stdout);
+  
+  // Save configuration including mounts
+  await writeFile(
+    'container-backup.json',
+    JSON.stringify(config, null, 2)
+  );
+  
+  console.log('Backed up mounts:', config.configuration.mounts);
+}
+```
+
+## Troubleshooting
+
+### Check Volume Mounts
+
+```typescript
+const result = await inspectContainer('container-id');
+
+if (!result.error) {
+  const config = JSON.parse(result.stdout);
+  
+  if (config.configuration.mounts.length === 0) {
+    console.log('No volumes mounted');
+  } else {
+    console.log('Active mounts:', config.configuration.mounts);
+  }
+}
+```
+
+### Verify Working Directory
+
+```typescript
+const result = await inspectContainer('container-id');
+const workDir = JSON.parse(result.stdout).configuration.initProcess.workingDirectory;
+
+if (!workDir) {
+  console.warn('No working directory set');
+}
+```
+
+## Related Features
+
+- [Containers](/features/containers) - Container lifecycle management
+- [Images](/features/images) - Image management
+- [Terminal](/features/terminal) - Access container filesystems

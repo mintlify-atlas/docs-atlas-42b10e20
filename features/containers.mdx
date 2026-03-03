@@ -1,0 +1,218 @@
+---
+title: Container Management
+description: Manage macOS containers with Container Kit's comprehensive container lifecycle operations
+---
+
+Container Kit provides powerful container management capabilities for macOS, built on top of Apple's container CLI. Manage app sandboxes, system containers, and virtualization environments with an intuitive interface.
+
+## Overview
+
+The container management system offers complete lifecycle control over your containers, from creation to removal, with real-time status monitoring and detailed inspection capabilities.
+
+## Core Functions
+
+### Listing All Containers
+
+Retrieve all containers on your system, including stopped containers:
+
+```typescript
+import { getAllContainers } from '$lib/services/containerization/containers';
+
+const result = await getAllContainers();
+
+if (!result.error) {
+  const containers = JSON.parse(result.stdout);
+  console.log('Containers:', containers);
+}
+```
+
+This function executes:
+```bash
+container ls -a --format json
+```
+
+### Starting Containers
+
+Start a stopped container by its ID:
+
+```typescript
+import { startContainer } from '$lib/services/containerization/containers';
+
+const result = await startContainer('container-id-here');
+
+if (!result.error) {
+  console.log('Container started successfully');
+}
+```
+
+### Stopping Containers
+
+Gracefully stop a running container:
+
+```typescript
+import { stopContainer } from '$lib/services/containerization/containers';
+
+const result = await stopContainer('container-id-here');
+
+if (!result.error) {
+  console.log('Container stopped');
+}
+```
+
+## Container Operations
+
+<Tabs>
+  <Tab title="Inspect">
+    Get detailed information about a specific container:
+
+    ```typescript
+    import { inspectContainer } from '$lib/services/containerization/containers';
+
+    const result = await inspectContainer('container-id');
+    
+    if (!result.error) {
+      const details = JSON.parse(result.stdout);
+      console.log('Configuration:', details.configuration);
+      console.log('Networks:', details.networks);
+      console.log('Status:', details.status);
+    }
+    ```
+
+    Returns comprehensive container details including:
+    - Configuration (hostname, DNS, resources, platform)
+    - Network attachments with IP addresses
+    - Container status and start time
+    - Resource allocations (CPU, memory)
+  </Tab>
+
+  <Tab title="Logs">
+    Access container logs for debugging:
+
+    ```typescript
+    import { getContainerLogs } from '$lib/services/containerization/containers';
+
+    const result = await getContainerLogs('container-id');
+    
+    if (!result.error) {
+      console.log('Container logs:', result.stdout);
+    }
+    ```
+  </Tab>
+
+  <Tab title="Remove">
+    Remove a stopped container:
+
+    ```typescript
+    import { removeContainer } from '$lib/services/containerization/containers';
+
+    const result = await removeContainer('container-id');
+    
+    if (!result.error) {
+      console.log('Container removed successfully');
+    }
+    ```
+
+    <Note>
+      Ensure the container is stopped before attempting removal.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Container Types
+
+Container Kit supports different container types on macOS:
+
+<Card title="App Sandbox Containers" icon="cube">
+  Isolated environments for sandboxed macOS applications with controlled access to system resources.
+</Card>
+
+<Card title="System Containers" icon="server">
+  Service containers for background processes and system-level operations.
+</Card>
+
+<Card title="Virtualization Containers" icon="desktop">
+  Full virtualization support using Apple's container CLI with network isolation.
+</Card>
+
+## Container Configuration
+
+When inspecting containers, you'll receive detailed configuration data:
+
+```typescript
+type ContainerConfiguration = {
+  hostname: string;
+  dns: ContainerDNS;
+  resources: ContainerResources;
+  image: ContainerImage;
+  platform: ContainerPlatform;
+  rosetta: boolean;
+  networks: ContainerConfigurationNetwork[];
+  id: string;
+  mounts: string[];
+  runtimeHandler: string;
+  initProcess: ContainerInitProcess;
+};
+
+type ContainerResources = {
+  cpus: number;
+  memoryInBytes: number;
+};
+```
+
+## Network Attachments
+
+Containers can have multiple network attachments:
+
+```typescript
+type NetworkAttachment = {
+  network: string;
+  hostname: string;
+  macAddress: string;
+  ipv6Address: string;
+  ipv4Address: string;
+  ipv4Gateway: string;
+};
+```
+
+<Info>
+  Container Kit uses Apple's native container CLI (`container` command) to ensure full compatibility with macOS security and virtualization features.
+</Info>
+
+## Error Handling
+
+All container operations return an `Output` type:
+
+```typescript
+type Output = {
+  error: boolean;
+  stderr: string;
+  stdout: string;
+};
+```
+
+Always check the `error` field before processing results:
+
+```typescript
+const result = await getAllContainers();
+
+if (result.error) {
+  console.error('Operation failed:', result.stderr);
+} else {
+  // Process result.stdout
+}
+```
+
+## Best Practices
+
+- Always check container status before performing operations
+- Use container IDs rather than names for reliability
+- Monitor resource usage through inspection
+- Review logs regularly for debugging and monitoring
+- Clean up stopped containers to free resources
+
+## Related Features
+
+- [Images](/features/images) - Manage container images
+- [Networks](/features/networks) - Configure container networking
+- [DNS](/features/dns) - Set up DNS resolution
+- [Terminal](/features/terminal) - Execute commands in containers

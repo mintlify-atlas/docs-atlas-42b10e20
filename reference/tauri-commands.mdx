@@ -1,0 +1,276 @@
+---
+title: Tauri Commands
+description: Rust backend API reference for Tauri commands
+---
+
+Tauri commands are Rust functions that can be called from the frontend JavaScript/TypeScript code. They provide secure access to system-level operations.
+
+## Command Modules
+
+Commands are organized into the following modules:
+
+- `system` - System-level operations requiring elevated privileges
+- `shell` - Shell and terminal operations
+- `registry` - Container registry management
+- `utils` - Utility functions for container commands
+- `images` - Container image operations
+
+## System Commands
+
+### executeWithElevatedCommand
+
+Execute a system command with elevated privileges (sudo).
+
+```rust
+#[tauri::command]
+pub async fn execute_with_elevated_command(
+    command: String,
+    args: Vec<String>,
+) -> Result<CommandResult, String>
+```
+
+<ParamField path="command" type="String" required>
+  The command to execute (e.g., "container", "rm")
+</ParamField>
+
+<ParamField path="args" type="Vec<String>" required>
+  Array of command arguments
+</ParamField>
+
+<ResponseField name="CommandResult" type="object">
+  <ParamField path="signal" type="Option<i32>">
+    Signal number if the command was terminated by a signal
+  </ParamField>
+  
+  <ParamField path="stdout" type="String">
+    Standard output from the command
+  </ParamField>
+  
+  <ParamField path="stderr" type="String">
+    Standard error output from the command
+  </ParamField>
+  
+  <ParamField path="code" type="Option<i32>">
+    Exit code of the command (0 for success)
+  </ParamField>
+</ResponseField>
+
+#### Example Usage
+
+```typescript
+import { commands } from '$lib/models/bindings';
+
+const result = await commands.executeWithElevatedCommand('container', [
+  's',
+  'dns',
+  'create',
+  'example.local'
+]);
+
+if (result.status === 'ok') {
+  console.log(result.data.stdout);
+}
+```
+
+#### Behavior
+
+- Automatically detects if the app is already running with elevated privileges
+- On macOS, prompts for password using the system authentication dialog
+- Sets the app name to "ContainerKit" in the elevation prompt
+- Includes the app icon in the authentication dialog
+
+## Shell Commands
+
+### getDefaultShell
+
+Get the default shell path for the current user.
+
+```rust
+#[tauri::command]
+pub fn get_default_shell() -> String
+```
+
+<ResponseField name="result" type="String">
+  The path to the default shell (e.g., "/bin/zsh", "/bin/bash")
+</ResponseField>
+
+#### Example Usage
+
+```typescript
+import { commands } from '$lib/models/bindings';
+
+const shell = await commands.getDefaultShell();
+console.log(`Default shell: ${shell}`);
+```
+
+#### Behavior
+
+- Reads the `SHELL` environment variable
+- Falls back to `/bin/zsh` if the variable is not set (macOS default)
+
+## Registry Commands
+
+### runContainerCommandWithStdin
+
+Execute a container command with standard input (useful for password input).
+
+```rust
+#[tauri::command]
+pub async fn run_container_command_with_stdin(
+    args: Vec<String>,
+    stdin: String,
+) -> Result<CommandResult, String>
+```
+
+<ParamField path="args" type="Vec<String>" required>
+  Command arguments to pass to the container CLI
+</ParamField>
+
+<ParamField path="stdin" type="String" required>
+  Input to write to the command's standard input
+</ParamField>
+
+<ResponseField name="CommandResult" type="object">
+  <ParamField path="signal" type="Option<i32>">
+    Signal number if terminated by a signal
+  </ParamField>
+  
+  <ParamField path="stdout" type="String">
+    Standard output from the command
+  </ParamField>
+  
+  <ParamField path="stderr" type="String">
+    Standard error output
+  </ParamField>
+  
+  <ParamField path="code" type="Option<i32>">
+    Exit code (0 for success)
+  </ParamField>
+</ResponseField>
+
+#### Example Usage
+
+```typescript
+import { commands } from '$lib/models/bindings';
+
+// Registry login with password via stdin
+const result = await commands.runContainerCommandWithStdin(
+  ['registry', 'login', '--username', 'user', '--password-stdin', 'registry.example.com'],
+  'my-password'
+);
+```
+
+#### Behavior
+
+- Spawns the `container` CLI command
+- Writes the `stdin` string to the process's standard input
+- Waits for the command to complete
+- Flushes stdin before waiting for output
+
+## Utility Commands
+
+### streamContainerCommand
+
+Stream output from a long-running container command (experimental).
+
+```rust
+#[tauri::command]
+pub async fn stream_container_command(
+    args: Vec<String>,
+    event_name: String
+) -> Result<(), String>
+```
+
+<ParamField path="args" type="Vec<String>" required>
+  Command arguments for the container CLI
+</ParamField>
+
+<ParamField path="event_name" type="String" required>
+  Base name for emitted events (will be suffixed with -stdout, -stderr, etc.)
+</ParamField>
+
+#### Example Usage
+
+```typescript
+import { commands } from '$lib/models/bindings';
+import { listen } from '@tauri-apps/api/event';
+
+// Listen for events
+await listen('pull-stdout', (event) => {
+  console.log('Output:', event.payload);
+});
+
+// Start streaming command
+await commands.streamContainerCommand(
+  ['image', 'pull', 'nginx'],
+  'pull'
+);
+```
+
+<Note>
+  This command is experimental and currently under development. Event emission is not fully implemented.
+</Note>
+
+## Type Definitions
+
+### CommandResult
+
+The result structure returned by command execution functions.
+
+```rust
+pub struct CommandResult {
+    pub signal: Option<i32>,
+    pub stdout: String,
+    pub stderr: String,
+    pub code: Option<i32>,
+}
+```
+
+<ParamField path="signal" type="Option<i32>">
+  The signal that terminated the process (Unix only). `None` if the process exited normally.
+</ParamField>
+
+<ParamField path="stdout" type="String">
+  Complete standard output from the command
+</ParamField>
+
+<ParamField path="stderr" type="String">
+  Complete standard error output from the command
+</ParamField>
+
+<ParamField path="code" type="Option<i32>">
+  Exit code from the process. `None` if the process was terminated by a signal. Code 0 indicates success.
+</ParamField>
+
+## Frontend Bindings
+
+All Tauri commands are automatically exposed to TypeScript via the `tauri-specta` code generation system.
+
+```typescript
+import { commands } from '$lib/models/bindings';
+
+// Commands are available with full type safety
+const result = await commands.executeWithElevatedCommand('ls', ['-la']);
+```
+
+The bindings provide:
+
+- Full TypeScript type safety
+- Automatic serialization/deserialization
+- Promise-based async API
+- Result type wrapping (Ok/Err pattern)
+
+## Error Handling
+
+All commands return a `Result` type that must be handled:
+
+```typescript
+const result = await commands.executeWithElevatedCommand('container', ['s', 'status']);
+
+if (result.status === 'ok') {
+  const { stdout, stderr, code } = result.data;
+  // Handle success
+} else {
+  console.error('Command failed:', result.error);
+}
+```

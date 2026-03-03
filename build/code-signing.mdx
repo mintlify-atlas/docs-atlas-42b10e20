@@ -1,0 +1,379 @@
+---
+title: Code Signing & Notarization
+description: Configure macOS code signing and Apple notarization for Container Kit
+---
+
+This guide covers setting up code signing and notarization for macOS to distribute Container Kit outside the Mac App Store.
+
+## Overview
+
+macOS requires applications to be signed and notarized to run on user systems without security warnings. Container Kit implements:
+
+- **Code Signing**: Cryptographically signs the app with your Developer ID
+- **Hardened Runtime**: Security features required for notarization
+- **Notarization**: Apple verification process for malware
+- **Update Signing**: Secure app updates with Tauri's updater
+
+## Prerequisites
+
+- Apple Developer account ($99/year)
+- Developer ID Application certificate
+- App-specific password for notarization
+- macOS development machine
+
+## Code Signing Setup
+
+### 1. Developer ID Certificate
+
+<Steps>
+  <Step title="Request certificate">
+    Sign in to [Apple Developer](https://developer.apple.com/account) and:
+    
+    1. Go to **Certificates, Identifiers & Profiles**
+    2. Click **+** to create a new certificate
+    3. Select **Developer ID Application**
+    4. Follow prompts to generate and download the certificate
+  </Step>
+
+  <Step title="Install certificate">
+    Double-click the downloaded certificate to install it in your Keychain.
+  </Step>
+
+  <Step title="Verify installation">
+    List your signing identities:
+
+    ```bash
+    security find-identity -v -p codesigning
+    ```
+
+    You should see an entry like:
+    ```
+    1) ABCDEF1234567890 "Developer ID Application: Your Name (TEAM_ID)"
+    ```
+  </Step>
+</Steps>
+
+### 2. Get Your Team ID
+
+Find your Apple Team ID:
+
+1. Go to [Apple Developer Account](https://developer.apple.com/account)
+2. Navigate to **Membership**
+3. Copy your **Team ID** (10-character alphanumeric)
+
+### 3. Create App-Specific Password
+
+<Steps>
+  <Step title="Sign in to Apple ID">
+    Go to [appleid.apple.com](https://appleid.apple.com) and sign in.
+  </Step>
+
+  <Step title="Generate password">
+    1. Go to **Security** section
+    2. Under **App-Specific Passwords**, click **Generate**
+    3. Enter a label like "Container Kit Notarization"
+    4. Copy the generated password (you won't see it again)
+  </Step>
+</Steps>
+
+## Environment Configuration
+
+Create a `.env` file in your project root with the following variables:
+
+```bash
+# Database
+DATABASE_URL=file:local.db
+
+# Apple Notarization
+APPLE_ID=your-apple-id@email.com
+APPLE_PASSWORD=xxxx-xxxx-xxxx-xxxx  # App-specific password
+APPLE_TEAM_ID=ABCD123456              # Your 10-character Team ID
+APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+
+# Tauri Update Signing
+TAURI_SIGNING_PRIVATE_KEY=your-private-key-here
+TAURI_SIGNING_PRIVATE_KEY_PASSWORD=your-password-here
+```
+
+### Environment Variable Details
+
+| Variable | Description | Example |
+|----------|-------------|----------|
+| `APPLE_ID` | Your Apple Developer email | `dev@example.com` |
+| `APPLE_PASSWORD` | App-specific password | `xxxx-xxxx-xxxx-xxxx` |
+| `APPLE_TEAM_ID` | 10-character Team ID | `ABCD123456` |
+| `APPLE_SIGNING_IDENTITY` | Full signing identity name | `Developer ID Application: ...` |
+| `TAURI_SIGNING_PRIVATE_KEY` | Private key for update signing | Generated key |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for private key | Your secure password |
+
+## Tauri Configuration
+
+The `tauri.conf.json` is already configured for signing:
+
+```json
+{
+  "bundle": {
+    "macOS": {
+      "hardenedRuntime": true,
+      "minimumSystemVersion": "26.0"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6..."
+    }
+  }
+}
+```
+
+### Key Settings
+
+- **hardenedRuntime**: Required for notarization
+- **minimumSystemVersion**: Minimum macOS version (26.0)
+- **createUpdaterArtifacts**: Generates update signatures
+
+## Generating Update Keys
+
+For Tauri's secure updater, generate a signing key pair:
+
+<Steps>
+  <Step title="Generate key pair">
+    Install Tauri CLI and generate keys:
+
+    ```bash
+    # Generate signing keypair
+    tauri signer generate -w ~/.tauri/container-kit.key
+    ```
+
+    This creates:
+    - Private key: `~/.tauri/container-kit.key`
+    - Public key: Printed to console
+  </Step>
+
+  <Step title="Add public key to config">
+    Copy the public key and add it to `src-tauri/tauri.conf.json`:
+
+    ```json
+    {
+      "plugins": {
+        "updater": {
+          "pubkey": "YOUR_PUBLIC_KEY_HERE"
+        }
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Add private key to .env">
+    Read your private key:
+
+    ```bash
+    cat ~/.tauri/container-kit.key
+    ```
+
+    Add to `.env`:
+    ```bash
+    TAURI_SIGNING_PRIVATE_KEY=your-private-key-content
+    TAURI_SIGNING_PRIVATE_KEY_PASSWORD=your-chosen-password
+    ```
+  </Step>
+</Steps>
+
+## Building with Code Signing
+
+Once configured, build with signing enabled:
+
+```bash
+pnpm tauri:build
+```
+
+The build process:
+
+<Steps>
+  <Step title="Frontend build">
+    Builds Svelte frontend with Vite
+  </Step>
+
+  <Step title="Rust compilation">
+    Compiles Rust backend for aarch64-apple-darwin
+  </Step>
+
+  <Step title="Code signing">
+    Signs the app bundle with your Developer ID
+  </Step>
+
+  <Step title="Notarization">
+    Uploads to Apple for notarization (takes 1-5 minutes)
+  </Step>
+
+  <Step title="Stapling">
+    Attaches notarization ticket to the app
+  </Step>
+
+  <Step title="Update artifacts">
+    Generates signed update bundles
+  </Step>
+</Steps>
+
+## Verification
+
+### Verify Code Signature
+
+Check that your app is properly signed:
+
+```bash
+codesign -dvv "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Container Kit.app"
+```
+
+Expected output:
+```
+Authority=Developer ID Application: Your Name (TEAM_ID)
+Signed Time=...
+TeamIdentifier=TEAM_ID
+Runtime Version=...
+```
+
+### Verify Notarization
+
+Check notarization status:
+
+```bash
+spctl -a -vvv -t install "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Container Kit.app"
+```
+
+Expected output:
+```
+accepted
+source=Notarized Developer ID
+```
+
+### Verify DMG Signature
+
+Check DMG signing:
+
+```bash
+codesign -dvv "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Container Kit_0.10.0_aarch64.dmg"
+```
+
+## Troubleshooting
+
+### Signing Identity Not Found
+
+If the build can't find your signing identity:
+
+```bash
+# List all signing identities
+security find-identity -v -p codesigning
+
+# Copy the exact identity name to APPLE_SIGNING_IDENTITY
+```
+
+### Notarization Fails
+
+Check notarization logs:
+
+```bash
+# Get recent notarization history
+xcrun notarytool history --apple-id "your-apple-id@email.com" \
+  --password "xxxx-xxxx-xxxx-xxxx" \
+  --team-id "TEAM_ID"
+
+# Get specific submission log
+xcrun notarytool log <submission-id> \
+  --apple-id "your-apple-id@email.com" \
+  --password "xxxx-xxxx-xxxx-xxxx" \
+  --team-id "TEAM_ID"
+```
+
+Common issues:
+- Hardened runtime not enabled (check `tauri.conf.json`)
+- Unsigned external binaries (ensure `container` binary is signed)
+- Invalid entitlements
+
+### App-Specific Password Issues
+
+If notarization authentication fails:
+
+1. Verify your app-specific password is correct
+2. Regenerate the password at [appleid.apple.com](https://appleid.apple.com)
+3. Update `.env` with the new password
+
+### Hardened Runtime Errors
+
+If you see hardened runtime errors:
+
+1. Ensure `hardenedRuntime: true` in `tauri.conf.json`
+2. Check that all embedded binaries are signed
+3. Verify entitlements are properly configured
+
+## Security Best Practices
+
+<Steps>
+  <Step title="Protect your .env file">
+    Never commit `.env` to version control:
+
+    ```bash
+    # Add to .gitignore
+    echo ".env" >> .gitignore
+    ```
+  </Step>
+
+  <Step title="Use environment-specific configs">
+    Create different configs for development and production:
+    - `.env.development` - No signing variables
+    - `.env.production` - Full signing configuration
+  </Step>
+
+  <Step title="Rotate credentials regularly">
+    - Regenerate app-specific passwords periodically
+    - Update Tauri signing keys if compromised
+    - Review certificate expiration dates
+  </Step>
+
+  <Step title="Secure private keys">
+    Store Tauri private keys securely:
+    - Use a password manager
+    - Encrypt the key file
+    - Restrict file permissions: `chmod 600 ~/.tauri/container-kit.key`
+  </Step>
+</Steps>
+
+## CI/CD Integration
+
+For automated signing in CI/CD pipelines:
+
+1. **Store secrets securely**: Use GitHub Secrets, GitLab CI/CD variables, etc.
+2. **Create .env in CI**: Generate `.env` file from secrets before build
+3. **Import certificates**: Install Developer ID certificate in CI keychain
+4. **Set up keychain access**: Unlock keychain for signing
+
+Example GitHub Actions workflow:
+
+```yaml
+- name: Import Code Signing Certificate
+  env:
+    CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+    CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+  run: |
+    echo $CERTIFICATE_BASE64 | base64 --decode > certificate.p12
+    security create-keychain -p actions temp.keychain
+    security import certificate.p12 -k temp.keychain -P $CERTIFICATE_PASSWORD
+    security set-keychain-settings -lut 21600 temp.keychain
+    security unlock-keychain -p actions temp.keychain
+
+- name: Build with Signing
+  env:
+    APPLE_ID: ${{ secrets.APPLE_ID }}
+    APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+    APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+    TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+    TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  run: pnpm tauri:build
+```
+
+## Next Steps
+
+- [Production Build](/build/production) - Build process overview
+- [Development Build](/build/development) - Development setup

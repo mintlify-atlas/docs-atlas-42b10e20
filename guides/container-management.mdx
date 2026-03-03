@@ -1,0 +1,452 @@
+---
+title: "Container Management"
+description: "Complete guide to creating, running, and managing containers in Container Kit"
+---
+
+## Overview
+
+Container Kit provides a comprehensive interface for managing Apple containers on macOS. This guide covers all container lifecycle operations from creation to removal.
+
+## Understanding Containers
+
+Containers are isolated environments that run applications with their own filesystem, network, and process space. Container Kit manages these using Apple's native containerization system.
+
+### Container States
+
+Containers can be in one of several states:
+
+- **Created** - Container exists but hasn't been started
+- **Running** - Container is actively running
+- **Stopped** - Container was running but has been stopped
+- **Paused** - Container processes are paused (not yet supported)
+- **Exited** - Container finished execution
+
+## Viewing Containers
+
+### List All Containers
+
+View all containers (running and stopped) in the Containers tab:
+
+```typescript
+import { getAllContainers } from '$lib/services/containerization/containers';
+
+const result = await getAllContainers();
+// Executes: container ls -a --format json
+
+if (!result.error) {
+  const containers = JSON.parse(result.stdout);
+  console.log(containers);
+}
+```
+
+The container list displays:
+- **Container ID** - Unique identifier
+- **Name** - Human-readable name
+- **Image** - Source image
+- **Status** - Current state (Running, Stopped, etc.)
+- **Created** - When the container was created
+- **Ports** - Exposed port mappings
+
+<Tip>
+  Use the search bar to filter containers by name or ID. Click column headers to sort the list.
+</Tip>
+
+## Creating Containers
+
+Create a new container from an image.
+
+<Steps>
+  <Step title="Navigate to Containers">
+    Click the **Containers** tab in the main navigation.
+  </Step>
+  
+  <Step title="Click New Container">
+    Click the **New Container** button in the top right corner.
+  </Step>
+  
+  <Step title="Configure Container">
+    Fill in the container configuration:
+    
+    - **Container Name** - A unique name for your container
+    - **Image** - Select from pulled images or enter image:tag
+    - **Port Mapping** - Map container ports to host ports
+    - **Environment Variables** - Set environment variables
+    - **Volumes** - Mount host directories into the container
+    - **Network** - Select the network configuration
+  </Step>
+  
+  <Step title="Create Container">
+    Click **Create** to create the container.
+    
+    ```typescript
+    import { createContainer } from '$lib/services/containerization/containers';
+    
+    await createContainer('my-app', 'nginx:latest');
+    // Note: Advanced options available in UI
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Container names must be unique. If a container with the same name exists, creation will fail.
+</Warning>
+
+### Quick Create from Image
+
+You can also create containers directly from the Images tab:
+
+1. Navigate to **Images**
+2. Click the **⋮** menu on an image
+3. Select **Create Container**
+4. Configure and create
+
+This pre-fills the image field with your selected image.
+
+## Starting Containers
+
+Start a stopped container to run it.
+
+<Steps>
+  <Step title="Select Container">
+    Find the container you want to start in the Containers list.
+  </Step>
+  
+  <Step title="Click Start">
+    Click the **Start** button (▶️ icon) or select **Start** from the container menu.
+    
+    ```typescript
+    import { startContainer } from '$lib/services/containerization/containers';
+    
+    const result = await startContainer('container-id');
+    // Executes: container start <container-id>
+    
+    if (!result.error) {
+      console.log('Container started successfully');
+    }
+    ```
+  </Step>
+  
+  <Step title="Verify Status">
+    The container status will change to **Running** and a green indicator will appear.
+  </Step>
+</Steps>
+
+<Tip>
+  You can start multiple containers at once by selecting them with checkboxes and clicking **Bulk Actions** > **Start**.
+</Tip>
+
+## Stopping Containers
+
+Stop a running container gracefully.
+
+<Steps>
+  <Step title="Select Running Container">
+    Find the running container in the Containers list.
+  </Step>
+  
+  <Step title="Click Stop">
+    Click the **Stop** button (⏹️ icon) or select **Stop** from the container menu.
+    
+    ```typescript
+    import { stopContainer } from '$lib/services/containerization/containers';
+    
+    const result = await stopContainer('container-id');
+    // Executes: container stop <container-id>
+    
+    if (!result.error) {
+      console.log('Container stopped successfully');
+    }
+    ```
+  </Step>
+  
+  <Step title="Wait for Shutdown">
+    The container will gracefully shutdown. Status changes to **Stopped**.
+  </Step>
+</Steps>
+
+<Note>
+  Stopping a container preserves its state. You can restart it later with the same configuration and data.
+</Note>
+
+## Inspecting Containers
+
+View detailed information about a container.
+
+<Steps>
+  <Step title="Open Container Details">
+    Click on a container row or select **Inspect** from the container menu.
+  </Step>
+  
+  <Step title="View Container Information">
+    The inspection view shows:
+    
+    ```typescript
+    import { inspectContainer } from '$lib/services/containerization/containers';
+    
+    const result = await inspectContainer('container-id');
+    // Executes: container inspect <container-id>
+    
+    if (!result.error) {
+      const details = JSON.parse(result.stdout);
+      console.log(details);
+    }
+    ```
+    
+    Information includes:
+    - **Configuration** - Container settings and parameters
+    - **Network Settings** - IP address, ports, DNS
+    - **State** - Current status, PID, exit code
+    - **Mounts** - Volume and bind mount information
+    - **Environment** - Environment variables
+  </Step>
+</Steps>
+
+## Viewing Container Logs
+
+View output and logs from a container.
+
+<Steps>
+  <Step title="Open Logs">
+    Select a container and click **Logs** or click the 📄 icon.
+  </Step>
+  
+  <Step title="View Output">
+    The logs panel shows:
+    
+    ```typescript
+    import { getContainerLogs } from '$lib/services/containerization/containers';
+    
+    const result = await getContainerLogs('container-id');
+    // Executes: container logs <container-id>
+    
+    if (!result.error) {
+      console.log(result.stdout);
+    }
+    ```
+    
+    - **stdout** - Standard output from the container
+    - **stderr** - Error output
+    - **Timestamps** - When each log entry was created
+  </Step>
+  
+  <Step title="Filter and Search">
+    Use the search box to filter logs by text. Toggle between stdout and stderr streams.
+  </Step>
+</Steps>
+
+<Tip>
+  Logs are real-time. Enable **Auto-scroll** to follow new log entries as they appear.
+</Tip>
+
+## Removing Containers
+
+Delete a container permanently.
+
+<Warning>
+  Removing a container is permanent and cannot be undone. All data in the container will be lost unless stored in a mounted volume.
+</Warning>
+
+<Steps>
+  <Step title="Stop the Container">
+    You must stop a container before removing it. Select the running container and click **Stop**.
+  </Step>
+  
+  <Step title="Remove Container">
+    Click the **Remove** button (🗑️ icon) or select **Remove** from the container menu.
+    
+    ```typescript
+    import { removeContainer } from '$lib/services/containerization/containers';
+    
+    const result = await removeContainer('container-id');
+    // Executes: container rm <container-id>
+    
+    if (!result.error) {
+      console.log('Container removed successfully');
+    }
+    ```
+  </Step>
+  
+  <Step title="Confirm Removal">
+    Click **Confirm** in the confirmation dialog.
+    
+    The container will be permanently deleted from the system.
+  </Step>
+</Steps>
+
+### Removing Multiple Containers
+
+Remove several containers at once:
+
+1. Select containers using checkboxes
+2. Click **Bulk Actions** > **Remove**
+3. Confirm the batch removal
+
+<Tip>
+  Use the "Select All Stopped" option to quickly select all non-running containers for cleanup.
+</Tip>
+
+## Container Terminal Access
+
+Execute commands inside a running container (coming soon).
+
+<Note>
+  Container terminal access is planned for a future release. Currently, you can use the system terminal with the `container` CLI directly.
+</Note>
+
+For now, use the terminal:
+
+```bash
+# Execute a command in a running container
+container exec <container-id> <command>
+
+# Example: Access bash shell
+container exec -it <container-id> /bin/bash
+
+# Example: Run a single command
+container exec <container-id> ls -la /app
+```
+
+## Container Statistics
+
+View resource usage for running containers (coming soon).
+
+<Note>
+  Real-time container statistics will be available in a future release, showing CPU, memory, network, and disk I/O usage.
+</Note>
+
+## Advanced Operations
+
+### Restart Containers
+
+Restart a container (stop and start in one operation):
+
+```bash
+# Using the container CLI
+container restart <container-id>
+```
+
+### Rename Containers
+
+Change a container's name:
+
+```bash
+# Using the container CLI
+container rename <old-name> <new-name>
+```
+
+### Container Commit
+
+Create a new image from a container's changes:
+
+```bash
+# Save container state as a new image
+container commit <container-id> <new-image-name:tag>
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use meaningful names">
+    Name containers descriptively:
+    
+    ✅ Good: `webapp-prod`, `mysql-dev`, `redis-cache`
+    
+    ❌ Bad: `container1`, `test`, `temp`
+    
+    Clear names make it easier to identify containers at a glance.
+  </Accordion>
+  
+  <Accordion title="Clean up unused containers">
+    Regularly remove stopped containers to free up disk space:
+    
+    1. Review stopped containers weekly
+    2. Remove containers you no longer need
+    3. Use bulk removal for efficiency
+    
+    Stopped containers still consume disk space even though they're not running.
+  </Accordion>
+  
+  <Accordion title="Monitor container logs">
+    Check logs regularly for:
+    
+    - Application errors
+    - Performance issues
+    - Security warnings
+    - Unexpected behavior
+    
+    Logs are essential for troubleshooting and monitoring application health.
+  </Accordion>
+  
+  <Accordion title="Use volumes for persistent data">
+    Store important data in volumes, not in the container filesystem:
+    
+    - Database data
+    - User uploads
+    - Configuration files
+    - Application state
+    
+    Data in volumes persists even when containers are removed.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Container won't start">
+    If a container fails to start:
+    
+    1. Check the container logs for error messages
+    2. Inspect the container configuration
+    3. Verify the image exists and is valid
+    4. Check for port conflicts with other containers
+    5. Ensure sufficient system resources (memory, CPU)
+    
+    Common causes:
+    - Port already in use
+    - Invalid configuration
+    - Missing dependencies
+    - Insufficient permissions
+  </Accordion>
+  
+  <Accordion title="Container keeps stopping">
+    If a container stops unexpectedly:
+    
+    1. View logs to see why the application exited
+    2. Check the exit code in container details
+    3. Verify the container command is correct
+    4. Ensure the application stays in the foreground
+    
+    Containers stop when their main process exits. Applications must run as foreground processes.
+  </Accordion>
+  
+  <Accordion title="Can't remove container">
+    If you can't remove a container:
+    
+    1. Ensure the container is stopped first
+    2. Check if the container is in use by another process
+    3. Try force removal: `container rm -f <container-id>`
+    4. Restart the containerization service if needed
+    
+    Force removal should be used as a last resort.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Image Management" icon="layer-group" href="/guides/image-management">
+    Learn how to manage container images
+  </Card>
+  
+  <Card title="Networking" icon="network-wired" href="/guides/networking">
+    Configure container networks and connectivity
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/guides/troubleshooting">
+    Solve common container issues
+  </Card>
+  
+  <Card title="Technical Reference" icon="code" href="/reference/frontend-services">
+    Explore the Container Kit API
+  </Card>
+</CardGroup>

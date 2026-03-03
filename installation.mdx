@@ -1,0 +1,316 @@
+---
+title: Installation
+description: Install Container Kit on macOS 26.0+ with Apple Silicon
+---
+
+# Installation
+
+Get Container Kit up and running on your macOS system. This guide covers system requirements, installation methods, and initial setup.
+
+## System Requirements
+
+<Warning>
+  **IMPORTANT**: Container Kit requires macOS 26.0 or later and is only compatible with Apple Silicon Macs.
+</Warning>
+
+Before installing Container Kit, ensure your system meets these requirements:
+
+- **macOS 26.0+** (Required - older versions not supported)
+- **Apple Silicon Mac** (M1/M2/M3/M4 - Intel Macs not supported)
+- **Xcode Command Line Tools**
+
+### Install Xcode Command Line Tools
+
+If you don't already have Xcode Command Line Tools installed, run:
+
+```bash
+xcode-select --install
+```
+
+This will prompt a GUI installer to set up the necessary development tools.
+
+## Installation Methods
+
+Container Kit can be installed in two ways: downloading pre-built releases or building from source. During the active development phase, building from source is recommended.
+
+### Option 1: Direct Download (Recommended for End Users)
+
+<Note>
+  Pre-built releases may not be available during the development phase. Use the "Build from Source" option below if downloads are unavailable.
+</Note>
+
+<Steps>
+  <Step title="Download the latest release">
+    Visit the [GitHub Releases](https://github.com/etherCorps/ContainerKit/releases) page and download the latest `.dmg` file for your version of macOS.
+  </Step>
+  
+  <Step title="Open the DMG file">
+    Double-click the downloaded `.dmg` file to mount the disk image. A Finder window will open showing the Container Kit application.
+  </Step>
+  
+  <Step title="Install to Applications">
+    Drag the Container Kit icon to your Applications folder to install it.
+    
+    ```bash
+    # The DMG installer will show a visual interface for this step
+    # Simply drag Container Kit.app to the Applications folder icon
+    ```
+  </Step>
+  
+  <Step title="Launch Container Kit">
+    Launch Container Kit from:
+    - **Applications folder** - Open Finder → Applications → Container Kit
+    - **Spotlight** - Press `Cmd + Space` and type "Container Kit"
+    - **Terminal** - Run `open -a "Container Kit"`
+  </Step>
+</Steps>
+
+### Option 2: Build from Source (Recommended for Developers)
+
+Building from source gives you the latest features and allows you to contribute to the project.
+
+<Steps>
+  <Step title="Install prerequisites">
+    Ensure you have the required development tools:
+    
+    ```bash
+    # Install Xcode Command Line Tools
+    xcode-select --install
+    
+    # Install pnpm (if not already installed)
+    npm install -g pnpm
+    ```
+    
+    <Info>
+      Container Kit uses `pnpm` as its package manager for faster installs and better disk space efficiency.
+    </Info>
+  </Step>
+  
+  <Step title="Clone the repository">
+    Clone the Container Kit repository from GitHub:
+    
+    ```bash
+    git clone https://github.com/etherCorps/ContainerKit.git
+    cd ContainerKit
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    Install all Node.js and Rust dependencies:
+    
+    ```bash
+    pnpm install
+    ```
+    
+    This will install:
+    - Frontend dependencies (Svelte, TailwindCSS, TypeScript, etc.)
+    - Build tools (Vite, Tauri CLI, etc.)
+    - Rust dependencies (configured in `src-tauri/Cargo.toml`)
+  </Step>
+  
+  <Step title="Download Apple Container CLI">
+    Container Kit relies on Apple's official container CLI. Download it using the provided script:
+    
+    ```bash
+    ./scripts/download-apple-container-cli.sh
+    ```
+    
+    This script will:
+    - Download `container-0.10.0-installer-signed.pkg` from Apple's GitHub
+    - Extract the installer package
+    - Copy `bin` and `libexec` directories to `src-tauri/binaries/sidecar/apple-container/`
+    - Create an Apple Silicon-specific binary copy at `container-aarch64-apple-darwin`
+    - Clean up temporary files
+    
+    <Note>
+      The Apple Container CLI is bundled as a sidecar binary and will be included in your built application.
+    </Note>
+  </Step>
+  
+  <Step title="Build the application">
+    Build Container Kit for production:
+    
+    ```bash
+    pnpm tauri:build
+    ```
+    
+    This command will:
+    - Generate database migrations from schema
+    - Build the frontend with Vite
+    - Compile the Rust backend
+    - Create a signed `.app` bundle
+    - Generate a `.dmg` installer
+    
+    The built application will be located at:
+    - **App Bundle**: `src-tauri/target/release/bundle/macos/Container Kit.app`
+    - **DMG Installer**: `src-tauri/target/release/bundle/dmg/Container Kit_0.10.0_aarch64.dmg`
+  </Step>
+  
+  <Step title="Install and run">
+    You can now run Container Kit in several ways:
+    
+    ```bash
+    # Option 1: Run directly from build output
+    open "src-tauri/target/release/bundle/macos/Container Kit.app"
+    
+    # Option 2: Install the DMG to Applications folder
+    # (Double-click the DMG file and drag to Applications)
+    
+    # Option 3: Run in development mode
+    pnpm tauri dev
+    ```
+  </Step>
+</Steps>
+
+## First Launch
+
+When you launch Container Kit for the first time, you'll need to complete a few setup steps:
+
+<Steps>
+  <Step title="Security permissions">
+    macOS may show a security warning for applications downloaded from the internet. To allow Container Kit to run:
+    
+    1. Open **System Settings** → **Privacy & Security**
+    2. Scroll down to the **Security** section
+    3. Click **Open Anyway** next to the Container Kit warning
+    
+    <Warning>
+      During the development phase, the app may not be signed and notarized. Apple is currently not allowing enrollment in the developer program for this project.
+    </Warning>
+  </Step>
+  
+  <Step title="Grant system permissions">
+    Container Kit requires certain system permissions for container management:
+    
+    - **Full Disk Access** - For accessing container data and sandboxed app files
+    - **Automation** - For terminal integration and container operations
+    
+    macOS will prompt you to grant these permissions when needed. You can also configure them manually:
+    
+    1. Open **System Settings** → **Privacy & Security**
+    2. Navigate to **Full Disk Access** and **Automation**
+    3. Enable Container Kit in both sections
+  </Step>
+  
+  <Step title="Initial configuration">
+    Follow the welcome wizard to configure your environment:
+    
+    - Choose your preferred theme (Light/Dark/System)
+    - Configure container storage locations
+    - Set up default container networking options
+    
+    <Info>
+      Most settings are one-time setup and can be changed later in Settings.
+    </Info>
+  </Step>
+</Steps>
+
+## Verification
+
+Verify that Container Kit is installed correctly:
+
+```bash
+# Check that the Apple Container CLI is available
+open -a "Container Kit"
+
+# The application should launch without errors
+# Check the About section for version information
+```
+
+You should see:
+- **Version**: 0.10.0
+- **Product Name**: Container Kit
+- **Identifier**: com.ethercorps.container-kit
+
+## Updating Container Kit
+
+### Automatic Updates
+
+Container Kit includes an auto-updater that checks for new releases. When an update is available:
+
+1. You'll see a notification in the app
+2. Click "Update" to download and install
+3. The app will restart automatically
+
+<Note>
+  Auto-updates require a valid code signature. During development, you may need to update manually.
+</Note>
+
+### Manual Updates
+
+To manually update Container Kit:
+
+**For DMG installations:**
+1. Download the latest `.dmg` from [GitHub Releases](https://github.com/etherCorps/ContainerKit/releases)
+2. Drag the new version to Applications (replacing the old one)
+
+**For source builds:**
+```bash
+cd ContainerKit
+git pull origin main
+pnpm install
+./scripts/download-apple-container-cli.sh
+pnpm tauri:build
+```
+
+## Troubleshooting
+
+### Common Installation Issues
+
+<AccordionGroup>
+  <Accordion title="Application won't open on macOS">
+    If you see "Container Kit can't be opened because it is from an unidentified developer":
+    
+    1. Right-click the app and select "Open"
+    2. Click "Open" in the confirmation dialog
+    3. Or go to **System Settings** → **Privacy & Security** → **Security** and click **Open Anyway**
+  </Accordion>
+  
+  <Accordion title="Build fails with Xcode errors">
+    Ensure Xcode Command Line Tools are properly installed:
+    
+    ```bash
+    # Check if installed
+    xcode-select -p
+    
+    # If not installed or having issues, reinstall
+    sudo rm -rf /Library/Developer/CommandLineTools
+    xcode-select --install
+    ```
+  </Accordion>
+  
+  <Accordion title="Apple Container CLI download fails">
+    If the download script fails:
+    
+    1. Check your internet connection
+    2. Verify the version in `scripts/download-apple-container-cli.sh` is available
+    3. Manually download from [Apple Container Releases](https://github.com/apple/container/releases)
+    4. Extract to `src-tauri/binaries/sidecar/apple-container/`
+  </Accordion>
+  
+  <Accordion title="pnpm command not found">
+    Install pnpm globally:
+    
+    ```bash
+    npm install -g pnpm
+    
+    # Or use corepack (built into Node.js 16.13+)
+    corepack enable
+    corepack prepare pnpm@latest --activate
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that Container Kit is installed, you're ready to start managing containers:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+    Get up and running with your first container
+  </Card>
+  
+  <Card title="Contributing" icon="code-pull-request" href="https://github.com/etherCorps/ContainerKit/blob/main/CONTRIBUTING.md">
+    Learn how to contribute to Container Kit development
+  </Card>
+</CardGroup>

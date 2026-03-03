@@ -1,0 +1,272 @@
+---
+title: Production Build
+description: Build Container Kit for production deployment with optimizations
+---
+
+This guide covers building Container Kit for production deployment with full optimizations, code signing, and notarization.
+
+## Prerequisites
+
+Before building for production:
+
+- Development environment set up (see [Development Build](/build/development))
+- Environment variables configured (`.env` file)
+- Code signing certificates (for signed builds)
+- Apple Developer account (for notarization)
+
+## Production Build Process
+
+Container Kit uses a custom build script that handles environment variables and targets macOS Apple Silicon (aarch64).
+
+### Build Command
+
+Run the production build:
+
+```bash
+pnpm tauri:build
+```
+
+This executes `./scripts/tauri-build.sh` which:
+1. Sources environment variables from `.env`
+2. Runs database migration generation
+3. Builds the Vite frontend with optimizations
+4. Compiles the Rust backend for `aarch64-apple-darwin`
+5. Creates DMG and APP bundles
+6. Signs and notarizes the application (if configured)
+
+### Build Script Details
+
+The `tauri-build.sh` script:
+
+```bash
+#!/bin/bash
+source .env && TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD \
+  TAURI_SIGNING_PRIVATE_KEY=$TAURI_SIGNING_PRIVATE_KEY \
+  APPLE_ID=$APPLE_ID \
+  APPLE_PASSWORD=$APPLE_PASSWORD \
+  APPLE_TEAM_ID=$APPLE_TEAM_ID \
+  APPLE_SIGNING_IDENTITY=$APPLE_SIGNING_IDENTITY \
+  tauri build --target aarch64-apple-darwin
+```
+
+## Build Configuration
+
+### Tauri Configuration
+
+Key build settings in `src-tauri/tauri.conf.json`:
+
+```json
+{
+  "productName": "Container Kit",
+  "version": "0.10.0",
+  "identifier": "com.ethercorps.container-kit",
+  "build": {
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../build"
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app"],
+    "createUpdaterArtifacts": true,
+    "macOS": {
+      "hardenedRuntime": true,
+      "minimumSystemVersion": "26.0"
+    }
+  }
+}
+```
+
+### Frontend Build
+
+The `pnpm build` command (defined in `package.json`):
+
+```bash
+pnpm db:generate && vite build
+```
+
+This:
+1. Generates database migrations and Rust bindings
+2. Builds the Svelte frontend with Vite
+3. Outputs to `build/` directory
+
+## Build Outputs
+
+Production builds are created in:
+
+```
+src-tauri/target/aarch64-apple-darwin/release/
+├── bundle/
+│   ├── dmg/
+│   │   └── Container Kit_0.10.0_aarch64.dmg
+│   └── macos/
+│       └── Container Kit.app
+└── Container Kit
+```
+
+### Build Artifacts
+
+<Steps>
+  <Step title="DMG Installer">
+    Custom-branded DMG installer with:
+    - Custom background image
+    - Drag-to-Applications installation
+    - Window size: 900x500px
+    - Code signed and notarized
+  </Step>
+
+  <Step title="APP Bundle">
+    Standalone application bundle:
+    - Hardened runtime enabled
+    - Apple Container CLI embedded
+    - Database migrations included
+    - Custom app icon
+  </Step>
+
+  <Step title="Updater Artifacts">
+    Auto-update files:
+    - Signature files for secure updates
+    - Latest release manifest
+    - Update bundles
+  </Step>
+</Steps>
+
+## Environment Variables
+
+Create a `.env` file with all required variables:
+
+```bash
+DATABASE_URL=file:local.db
+
+# Apple notarization
+APPLE_ID=your-apple-id@email.com
+APPLE_PASSWORD=app-specific-password
+APPLE_TEAM_ID=YOUR_TEAM_ID
+APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+
+# Tauri signing (for updates)
+TAURI_SIGNING_PRIVATE_KEY=your-private-key
+TAURI_SIGNING_PRIVATE_KEY_PASSWORD=your-password
+```
+
+See [Code Signing](/build/code-signing) for detailed setup instructions.
+
+## Build Steps
+
+<Steps>
+  <Step title="Prepare environment">
+    Ensure your `.env` file contains all required variables:
+
+    ```bash
+    # Verify .env file exists
+    cat .env
+    ```
+  </Step>
+
+  <Step title="Clean previous builds">
+    Optional: Remove previous build artifacts:
+
+    ```bash
+    rm -rf src-tauri/target/aarch64-apple-darwin/release/bundle
+    ```
+  </Step>
+
+  <Step title="Run production build">
+    Execute the build script:
+
+    ```bash
+    pnpm tauri:build
+    ```
+
+    This process takes several minutes depending on your system.
+  </Step>
+
+  <Step title="Verify build outputs">
+    Check that build artifacts were created:
+
+    ```bash
+    ls -la src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/
+    ls -la src-tauri/target/aarch64-apple-darwin/release/bundle/macos/
+    ```
+  </Step>
+</Steps>
+
+## Build Optimization
+
+### Included Resources
+
+The build automatically bundles:
+
+- **Database migrations**: `migrations/*`
+- **Apple Container CLI**: `binaries/sidecar/apple-container/**/*`
+- **App icons**: Custom iconset in multiple sizes
+- **External binaries**: `container` CLI marked as external binary
+
+### Bundle Configuration
+
+DMG appearance settings:
+
+```json
+{
+  "dmg": {
+    "background": "./images/background.jpg",
+    "appPosition": { "x": 250, "y": 200 },
+    "applicationFolderPosition": { "x": 650, "y": 200 },
+    "windowSize": { "height": 500, "width": 900 }
+  }
+}
+```
+
+## Troubleshooting
+
+### Build Fails
+
+If the build fails:
+
+```bash
+# Check Rust toolchain
+rustup show
+
+# Update Rust if needed
+rustup update
+
+# Verify aarch64 target
+rustup target add aarch64-apple-darwin
+```
+
+### Signing Errors
+
+Verify your signing certificates:
+
+```bash
+# List available signing identities
+security find-identity -v -p codesigning
+```
+
+See [Code Signing](/build/code-signing) for troubleshooting.
+
+### Missing Dependencies
+
+Ensure all dependencies are installed:
+
+```bash
+# Reinstall dependencies
+pnpm install
+
+# Verify Apple Container CLI
+ls -la src-tauri/binaries/sidecar/apple-container/bin/
+```
+
+## CI/CD Integration
+
+For automated builds in CI/CD:
+
+1. Store environment variables as secrets
+2. Install dependencies: `pnpm install`
+3. Download Apple CLI: `pnpm script:download-apple-container`
+4. Run build: `pnpm tauri:build`
+5. Upload artifacts from `src-tauri/target/aarch64-apple-darwin/release/bundle/`
+
+## Next Steps
+
+- [Code Signing](/build/code-signing) - Configure signing and notarization
+- [Development Build](/build/development) - Return to development mode

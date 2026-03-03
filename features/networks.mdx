@@ -1,0 +1,340 @@
+---
+title: Network Configuration
+description: Configure container networking, manage network attachments, and control network isolation
+---
+
+Container Kit provides comprehensive networking capabilities for macOS containers, enabling network isolation, multi-network attachments, and advanced network configuration for your containerized applications.
+
+## Overview
+
+The networking system in Container Kit leverages Apple's container CLI to provide native macOS networking with full IPv4 and IPv6 support, DNS integration, and network isolation.
+
+## Network Concepts
+
+### Network Attachments
+
+Containers can attach to one or more networks, each providing isolated network communication:
+
+```typescript
+type NetworkAttachment = {
+  network: string;         // Network name/ID
+  hostname: string;        // Container hostname on this network
+  macAddress: string;      // MAC address of container interface
+  ipv6Address: string;     // IPv6 address with subnet CIDR
+  ipv4Address: string;     // IPv4 address with subnet CIDR
+  ipv4Gateway: string;     // IPv4 gateway address
+};
+```
+
+### Container Network Configuration
+
+Each container has network settings in its configuration:
+
+```typescript
+type ContainerConfigurationNetwork = {
+  options: {
+    hostname: string;
+  };
+  network: string;
+};
+```
+
+## Inspecting Network Configuration
+
+### View Container Networks
+
+Get detailed network information for a container:
+
+```typescript
+import { inspectContainer } from '$lib/services/containerization/containers';
+
+const result = await inspectContainer('container-id');
+
+if (!result.error) {
+  const config = JSON.parse(result.stdout);
+  
+  // Configuration networks
+  console.log('Configured networks:', config.configuration.networks);
+  
+  // Active network attachments
+  console.log('Network attachments:', config.networks);
+}
+```
+
+<CodeGroup>
+```typescript Configuration Networks
+const result = await inspectContainer('web-container');
+const config = JSON.parse(result.stdout);
+
+config.configuration.networks.forEach(net => {
+  console.log('Network:', net.network);
+  console.log('Hostname:', net.options.hostname);
+});
+```
+
+```typescript Network Attachments
+const result = await inspectContainer('web-container');
+const container = JSON.parse(result.stdout);
+
+container.networks.forEach(attachment => {
+  console.log('Network:', attachment.network);
+  console.log('IPv4:', attachment.ipv4Address);
+  console.log('IPv6:', attachment.ipv6Address);
+  console.log('Gateway:', attachment.ipv4Gateway);
+  console.log('MAC:', attachment.macAddress);
+});
+```
+</CodeGroup>
+
+## Network Features
+
+<Tabs>
+  <Tab title="IP Addressing">
+    Each network attachment provides both IPv4 and IPv6 addresses:
+
+    ```typescript
+    const result = await inspectContainer('container-id');
+    const container = JSON.parse(result.stdout);
+    
+    container.networks.forEach(net => {
+      // IPv4 with CIDR (e.g., "172.16.0.2/24")
+      console.log('IPv4 Address:', net.ipv4Address);
+      
+      // IPv6 with CIDR (e.g., "fd00::2/64")
+      console.log('IPv6 Address:', net.ipv6Address);
+      
+      // Gateway for routing
+      console.log('Default Gateway:', net.ipv4Gateway);
+    });
+    ```
+
+    <Info>
+      CIDR notation includes the subnet mask, allowing you to determine the network range.
+    </Info>
+  </Tab>
+
+  <Tab title="Hostname">
+    Each network attachment has an associated hostname:
+
+    ```typescript
+    const result = await inspectContainer('container-id');
+    const container = JSON.parse(result.stdout);
+    
+    // Global hostname
+    console.log('Container hostname:', container.configuration.hostname);
+    
+    // Per-network hostnames
+    container.networks.forEach(net => {
+      console.log(`Hostname on ${net.network}:`, net.hostname);
+    });
+    ```
+
+    Hostnames enable DNS-based service discovery between containers.
+  </Tab>
+
+  <Tab title="MAC Addresses">
+    Each network interface has a unique MAC address:
+
+    ```typescript
+    const result = await inspectContainer('container-id');
+    const container = JSON.parse(result.stdout);
+    
+    container.networks.forEach(net => {
+      console.log(`MAC on ${net.network}:`, net.macAddress);
+    });
+    ```
+
+    MAC addresses are automatically assigned by the container runtime.
+  </Tab>
+</Tabs>
+
+## Multi-Network Containers
+
+Containers can attach to multiple networks simultaneously:
+
+```typescript
+const result = await inspectContainer('multi-network-container');
+const container = JSON.parse(result.stdout);
+
+if (container.networks.length > 1) {
+  console.log('Multi-network container detected');
+  
+  container.networks.forEach((net, index) => {
+    console.log(`\nNetwork ${index + 1}:`);
+    console.log('  Name:', net.network);
+    console.log('  IPv4:', net.ipv4Address);
+    console.log('  IPv6:', net.ipv6Address);
+    console.log('  Hostname:', net.hostname);
+  });
+}
+```
+
+### Use Cases for Multi-Network
+
+<Card title="Frontend/Backend Separation" icon="layer-group">
+  Web containers on public network, database containers on private backend network.
+</Card>
+
+<Card title="Service Mesh" icon="project-diagram">
+  Containers with management network and data network for separated control/data planes.
+</Card>
+
+<Card title="Network Isolation" icon="shield-alt">
+  Sensitive services on isolated networks with controlled access.
+</Card>
+
+## DNS Integration
+
+Containers include DNS configuration:
+
+```typescript
+type ContainerDNS = {
+  searchDomains: string[];   // DNS search domains
+  options: string[];         // DNS resolver options
+  domain: string;            // Container domain
+  nameservers: string[];     // DNS nameserver IPs
+};
+```
+
+Access DNS configuration:
+
+```typescript
+const result = await inspectContainer('container-id');
+const dns = JSON.parse(result.stdout).configuration.dns;
+
+console.log('DNS Configuration:');
+console.log('Domain:', dns.domain);
+console.log('Nameservers:', dns.nameservers);
+console.log('Search domains:', dns.searchDomains);
+console.log('Options:', dns.options);
+```
+
+See [DNS Management](/features/dns) for more details.
+
+## Network Platform Info
+
+Container platform information includes network-relevant details:
+
+```typescript
+type ContainerPlatform = {
+  os: string;              // Operating system
+  architecture: string;    // CPU architecture (aarch64 for Apple Silicon)
+};
+
+const result = await inspectContainer('container-id');
+const platform = JSON.parse(result.stdout).configuration.platform;
+
+console.log('Platform:', platform.os);           // "darwin"
+console.log('Architecture:', platform.architecture); // "aarch64"
+```
+
+## Network Troubleshooting
+
+### Verify Network Connectivity
+
+```typescript
+import { inspectContainer, getContainerLogs } from '$lib/services/containerization/containers';
+
+// Check network configuration
+const inspectResult = await inspectContainer('container-id');
+const container = JSON.parse(inspectResult.stdout);
+
+if (container.networks.length === 0) {
+  console.warn('No network attachments found');
+} else {
+  container.networks.forEach(net => {
+    console.log('✓ Connected to:', net.network);
+    console.log('  IPv4:', net.ipv4Address);
+    console.log('  Gateway:', net.ipv4Gateway);
+  });
+}
+
+// Check logs for network errors
+const logsResult = await getContainerLogs('container-id');
+if (!logsResult.error) {
+  const networkErrors = logsResult.stdout
+    .split('\n')
+    .filter(line => line.includes('network') || line.includes('connection'));
+  
+  if (networkErrors.length > 0) {
+    console.log('Network-related log entries:', networkErrors);
+  }
+}
+```
+
+### Check IP Allocation
+
+```typescript
+const result = await inspectContainer('container-id');
+const container = JSON.parse(result.stdout);
+
+container.networks.forEach(net => {
+  const ipv4 = net.ipv4Address.split('/')[0];  // Remove CIDR
+  const subnet = net.ipv4Address.split('/')[1]; // Get subnet mask
+  
+  console.log('IP:', ipv4);
+  console.log('Subnet mask:', subnet);
+  console.log('Full CIDR:', net.ipv4Address);
+});
+```
+
+## Network Security
+
+### Network Isolation
+
+Containers on different networks are isolated:
+
+```typescript
+// Containers on separate networks cannot communicate
+// unless explicitly connected to the same network
+
+const container1 = await inspectContainer('container-1');
+const container2 = await inspectContainer('container-2');
+
+const net1 = JSON.parse(container1.stdout).networks.map(n => n.network);
+const net2 = JSON.parse(container2.stdout).networks.map(n => n.network);
+
+const sharedNetworks = net1.filter(n => net2.includes(n));
+
+if (sharedNetworks.length > 0) {
+  console.log('Containers can communicate on:', sharedNetworks);
+} else {
+  console.log('Containers are network-isolated');
+}
+```
+
+## Best Practices
+
+### Network Design
+
+- Use separate networks for different application tiers
+- Implement frontend/backend network separation
+- Limit container network attachments to necessary networks
+- Use meaningful network names for documentation
+
+### IP Management
+
+- Allow the runtime to assign IPs automatically
+- Monitor IP address allocation in your subnets
+- Plan subnet sizes for scaling
+- Use IPv6 for future-proofing
+
+### Security
+
+- Isolate sensitive containers on private networks
+- Use network policies for access control
+- Monitor network traffic between containers
+- Regularly audit network configurations
+
+### Performance
+
+- Minimize cross-network communication
+- Use localhost for same-container services
+- Consider network bandwidth for data-intensive apps
+- Monitor network latency
+
+## Related Features
+
+- [DNS](/features/dns) - DNS configuration and management
+- [Containers](/features/containers) - Container lifecycle operations
+- [Registry](/features/registry) - Network-based registry access

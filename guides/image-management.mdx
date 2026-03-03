@@ -1,0 +1,550 @@
+---
+title: "Image Management"
+description: "Complete guide to managing container images - pull, push, import, export, and remove"
+---
+
+## Overview
+
+Container images are the blueprints for containers. This guide covers all image management operations in Container Kit, from pulling images from registries to importing and exporting local image archives.
+
+## Understanding Container Images
+
+A container image is a read-only template containing:
+- **Application code** - Your software and its dependencies
+- **Runtime environment** - Language runtimes, libraries
+- **System tools** - Utilities and binaries
+- **Configuration** - Default settings and environment
+
+Images are stored locally and can be used to create multiple containers.
+
+## Viewing Images
+
+### List All Images
+
+View all images stored on your system:
+
+```typescript
+import { getAllImages } from '$lib/services/containerization/images';
+
+const result = await getAllImages();
+// Executes: container image ls --format json
+
+if (!result.error) {
+  const images = JSON.parse(result.stdout);
+  console.log(images);
+}
+```
+
+The Images tab displays:
+- **Repository** - Image name/registry path
+- **Tag** - Version identifier (e.g., `latest`, `1.0.0`)
+- **Image ID** - Unique identifier
+- **Size** - Disk space used
+- **Created** - When the image was built
+
+<Tip>
+  Images with the same ID but different tags share layers. They don't duplicate disk space.
+</Tip>
+
+## Pulling Images
+
+Download images from container registries.
+
+<Steps>
+  <Step title="Navigate to Images">
+    Click the **Images** tab in the main navigation.
+  </Step>
+  
+  <Step title="Click Pull Image">
+    Click the **Pull Image** button in the top right corner.
+  </Step>
+  
+  <Step title="Enter Image Details">
+    Specify the image to pull:
+    
+    ```
+    [registry/][namespace/]repository[:tag]
+    ```
+    
+    Examples:
+    - `nginx` - Official nginx image, latest tag
+    - `nginx:1.24` - nginx version 1.24
+    - `redis:alpine` - Redis with Alpine Linux base
+    - `ghcr.io/user/app:v1.0` - Custom registry image
+  </Step>
+  
+  <Step title="Pull the Image">
+    Click **Pull** to download the image:
+    
+    ```typescript
+    import { pullImage } from '$lib/services/containerization/images';
+    
+    const result = await pullImage(['nginx:latest']);
+    // Executes: container image pull nginx:latest
+    
+    if (!result.error) {
+      console.log('Image pulled successfully');
+    }
+    ```
+    
+    A progress indicator shows the download status.
+  </Step>
+</Steps>
+
+<Note>
+  Pulling an image downloads all its layers. Large images may take several minutes depending on your internet connection.
+</Note>
+
+### Pull Progress Tracking
+
+For long-running pulls, Container Kit shows:
+- Layer download progress
+- Total size and downloaded bytes
+- Estimated time remaining
+- Pull status (Downloading, Extracting, Complete)
+
+<Tip>
+  You can pull multiple images simultaneously. Each pull operation runs in the background.
+</Tip>
+
+## Pushing Images (Coming Soon)
+
+Push your custom images to container registries.
+
+<Note>
+  Image push functionality is planned for a future release. For now, use the CLI:
+  
+  ```bash
+  container image push <image-name:tag>
+  ```
+</Note>
+
+When available, you'll be able to:
+1. Tag images with your registry path
+2. Authenticate with your registry
+3. Push images directly from the UI
+
+## Removing Images
+
+Delete images you no longer need to free up disk space.
+
+<Warning>
+  You cannot remove an image if it's being used by any container (running or stopped). Remove dependent containers first.
+</Warning>
+
+<Steps>
+  <Step title="Select Image">
+    Find the image you want to remove in the Images list.
+  </Step>
+  
+  <Step title="Click Remove">
+    Click the **Remove** button (🗑️ icon) or select **Remove** from the image menu.
+    
+    ```typescript
+    import { removeImage } from '$lib/services/containerization/images';
+    
+    const result = await removeImage('nginx:latest');
+    // Executes: container image rm nginx:latest
+    
+    if (!result.error) {
+      console.log('Image removed successfully');
+    }
+    ```
+  </Step>
+  
+  <Step title="Confirm Removal">
+    Click **Confirm** in the confirmation dialog.
+    
+    The image and its unused layers will be deleted.
+  </Step>
+</Steps>
+
+### Removing Multiple Images
+
+Remove several images at once:
+
+```typescript
+import { removeMultipleImages } from '$lib/services/containerization/images';
+
+const result = await removeMultipleImages(['nginx:latest', 'redis:alpine', 'postgres:15']);
+// Executes: container image rm nginx:latest redis:alpine postgres:15
+
+if (!result.error) {
+  console.log('Images removed successfully');
+}
+```
+
+In the UI:
+1. Select images using checkboxes
+2. Click **Bulk Actions** > **Remove**
+3. Confirm the batch removal
+
+<Tip>
+  Use **Select Unused Images** to quickly find images not used by any containers.
+</Tip>
+
+## Inspecting Images
+
+View detailed information about an image.
+
+<Steps>
+  <Step title="Open Image Details">
+    Click on an image row or select **Inspect** from the image menu.
+  </Step>
+  
+  <Step title="View Image Information">
+    The inspection view shows:
+    
+    ```typescript
+    import { inspectImage } from '$lib/services/containerization/images';
+    
+    const result = await inspectImage('nginx:latest');
+    // Executes: container image inspect nginx:latest
+    
+    if (!result.error) {
+      const details = JSON.parse(result.stdout);
+      console.log(details);
+    }
+    ```
+    
+    Information includes:
+    - **Architecture** - CPU architecture (arm64, amd64)
+    - **OS** - Operating system (linux, darwin)
+    - **Layers** - Image layer information
+    - **Environment** - Default environment variables
+    - **Exposed Ports** - Ports the container listens on
+    - **Volumes** - Default volume mount points
+    - **Labels** - Metadata and annotations
+  </Step>
+</Steps>
+
+## Importing Images
+
+Import an image from a tar archive file.
+
+<Steps>
+  <Step title="Navigate to Import">
+    Click **Images** > **Import Image**.
+  </Step>
+  
+  <Step title="Select Tar File">
+    Choose a `.tar` file containing the image:
+    
+    ```typescript
+    import { importImageFromTar } from '$lib/services/containerization/images';
+    
+    const result = await importImageFromTar('/path/to/image.tar');
+    // Executes: container image load -i /path/to/image.tar
+    
+    if (!result.error) {
+      console.log('Image imported:', result.stdout);
+    }
+    ```
+  </Step>
+  
+  <Step title="Import Progress">
+    The import process:
+    1. Reads the tar archive
+    2. Extracts image layers
+    3. Registers the image locally
+    
+    A progress indicator shows the import status.
+  </Step>
+  
+  <Step title="Verify Import">
+    The imported image appears in your Images list.
+  </Step>
+</Steps>
+
+<Note>
+  Imported images must be compatible with your system architecture (Apple Silicon - arm64/aarch64).
+</Note>
+
+## Exporting Images
+
+Export an image to a tar archive for backup or sharing.
+
+<Steps>
+  <Step title="Select Image to Export">
+    Find the image you want to export in the Images list.
+  </Step>
+  
+  <Step title="Click Export">
+    Select **Export** from the image menu.
+  </Step>
+  
+  <Step title="Configure Export">
+    Choose export options:
+    
+    ```typescript
+    import { exportImageToTar } from '$lib/services/containerization/images';
+    
+    const result = await exportImageToTar(
+      'nginx:latest',
+      '/Users/you/Downloads/nginx-latest.tar',
+      ['--arch', 'aarch64'] // Optional: specify architecture
+    );
+    // Executes: container image save --arch aarch64 -o /path/to/output.tar nginx:latest
+    
+    if (!result.error) {
+      console.log('Image exported successfully');
+    }
+    ```
+    
+    Options:
+    - **Output Path** - Where to save the tar file
+    - **Architecture** - Specify architecture (aarch64, x86_64)
+    - **Compression** - Compress the archive (coming soon)
+  </Step>
+  
+  <Step title="Export Progress">
+    The export process:
+    1. Collects image layers
+    2. Creates tar archive
+    3. Saves to specified location
+    
+    Large images may take several minutes to export.
+  </Step>
+</Steps>
+
+<Tip>
+  Exported images can be shared with others or imported on different systems. Ensure architecture compatibility.
+</Tip>
+
+## Image Tags
+
+Tags are version labels for images. Multiple tags can point to the same image.
+
+### Understanding Tags
+
+- `latest` - Most recent version (default if no tag specified)
+- `1.0.0` - Specific version number
+- `stable` - Stable release channel
+- `dev`, `beta` - Development versions
+- `alpine` - Variant (e.g., Alpine Linux base)
+
+### Tagging Images (CLI)
+
+Create additional tags for an image:
+
+```bash
+# Tag an existing image
+container image tag nginx:latest nginx:prod
+
+# Tag with custom registry
+container image tag myapp:latest ghcr.io/username/myapp:v1.0
+```
+
+<Warning>
+  Always use explicit tags in production. The `latest` tag can change unexpectedly when new versions are released.
+</Warning>
+
+## Registry Authentication
+
+Authenticate with private container registries to pull/push images.
+
+### Configure Registry Credentials
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Click **Settings** > **Registry**.
+  </Step>
+  
+  <Step title="Add Registry">
+    Click **Add Registry** and enter:
+    - **Registry URL** - e.g., `ghcr.io`, `docker.io`
+    - **Username** - Your registry username
+    - **Password/Token** - Access token or password
+  </Step>
+  
+  <Step title="Test Connection">
+    Click **Test** to verify authentication.
+  </Step>
+  
+  <Step title="Save Credentials">
+    Click **Save** to store the credentials securely.
+  </Step>
+</Steps>
+
+<Note>
+  Credentials are stored securely in the macOS Keychain. Container Kit never stores passwords in plain text.
+</Note>
+
+### Common Registries
+
+- **Docker Hub** - `docker.io` (public and private images)
+- **GitHub Container Registry** - `ghcr.io`
+- **Google Container Registry** - `gcr.io`
+- **Amazon ECR** - `<account-id>.dkr.ecr.<region>.amazonaws.com`
+- **Azure Container Registry** - `<registry-name>.azurecr.io`
+
+## Image Storage and Cleanup
+
+### View Storage Usage
+
+The Images tab shows total disk space used by all images.
+
+### Cleanup Strategies
+
+<AccordionGroup>
+  <Accordion title="Remove unused images">
+    Images not used by any container:
+    
+    1. Navigate to Images tab
+    2. Click **Select Unused Images**
+    3. Review and confirm removal
+    
+    This frees up disk space without affecting running containers.
+  </Accordion>
+  
+  <Accordion title="Remove dangling images">
+    Dangling images are untagged layers left behind after builds:
+    
+    ```bash
+    # Using CLI to remove dangling images
+    container image prune
+    ```
+    
+    UI support for this is coming soon.
+  </Accordion>
+  
+  <Accordion title="Remove old versions">
+    Keep only the latest version of each image:
+    
+    1. Sort images by creation date
+    2. Identify old versions (same name, different tags)
+    3. Remove versions you no longer need
+    
+    Consider keeping at least one previous version for rollback.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use specific tags">
+    Always specify exact versions in production:
+    
+    ✅ Good: `nginx:1.24.0`, `node:20.11-alpine`
+    
+    ❌ Bad: `nginx:latest`, `node`
+    
+    Specific tags ensure consistent deployments and prevent unexpected updates.
+  </Accordion>
+  
+  <Accordion title="Pull images before creating containers">
+    Pre-pull images to avoid delays when creating containers:
+    
+    1. Pull all required images first
+    2. Then create containers from pulled images
+    3. This makes container creation instant
+    
+    Especially important for large images (databases, ML frameworks).
+  </Accordion>
+  
+  <Accordion title="Regular cleanup">
+    Schedule regular image cleanup:
+    
+    - Weekly: Review and remove unused images
+    - Monthly: Check for updated versions
+    - As needed: Remove dangling images
+    
+    This prevents disk space issues and keeps your system organized.
+  </Accordion>
+  
+  <Accordion title="Verify image architecture">
+    Ensure images match your system architecture:
+    
+    - Apple Silicon: `arm64`, `aarch64`
+    - Intel: `amd64`, `x86_64`
+    
+    Multi-architecture images automatically select the correct variant.
+  </Accordion>
+  
+  <Accordion title="Export important images">
+    Export critical images for backup:
+    
+    1. Export custom-built images
+    2. Export configured base images
+    3. Store exports in a safe location
+    
+    This provides recovery options if images are accidentally removed.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Image pull fails">
+    If pulling an image fails:
+    
+    1. Check your internet connection
+    2. Verify the image name and tag are correct
+    3. Ensure you're authenticated if it's a private image
+    4. Check registry status (some registries have rate limits)
+    5. Try pulling from a different registry mirror
+    
+    Common error messages:
+    - `not found` - Image name or tag is incorrect
+    - `unauthorized` - Need to authenticate
+    - `timeout` - Network or registry issues
+  </Accordion>
+  
+  <Accordion title="Image won't remove">
+    If you can't remove an image:
+    
+    1. Check if any containers are using it:
+       - Running containers
+       - Stopped containers
+    2. Remove all dependent containers first
+    3. Try removing by image ID instead of name:tag
+    4. Use force removal as last resort: `container image rm -f <image>`
+    
+    Images with multiple tags require all tags to be removed.
+  </Accordion>
+  
+  <Accordion title="Import fails">
+    If importing an image tar file fails:
+    
+    1. Verify the tar file isn't corrupted
+    2. Check the file size (must be complete download)
+    3. Ensure the image architecture matches your system
+    4. Try re-exporting the image from the source
+    5. Check available disk space
+    
+    Imports require enough space for the uncompressed image.
+  </Accordion>
+  
+  <Accordion title="Architecture mismatch">
+    If you get architecture errors:
+    
+    1. Check your system architecture: `uname -m`
+    2. Pull the correct variant:
+       - For Apple Silicon: arm64/aarch64 images
+       - For Intel: amd64/x86_64 images
+    3. Some images are multi-arch and auto-detect
+    4. Export with explicit architecture flag if needed
+    
+    Running wrong architecture images may fail or perform poorly.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Container Management" icon="box" href="/guides/container-management">
+    Create and manage containers from your images
+  </Card>
+  
+  <Card title="Networking" icon="network-wired" href="/guides/networking">
+    Configure networking for your containers
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/guides/troubleshooting">
+    Solve common image and container issues
+  </Card>
+  
+  <Card title="Technical Reference" icon="code" href="/reference/frontend-services">
+    Explore the Container Kit API
+  </Card>
+</CardGroup>

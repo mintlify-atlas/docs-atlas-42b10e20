@@ -1,0 +1,427 @@
+---
+title: Built-in Terminal
+description: Execute container commands and manage container lifecycle through the integrated terminal
+---
+
+Container Kit features a built-in terminal interface for executing container commands, viewing logs, and managing your container environment directly from the application.
+
+## Overview
+
+The integrated terminal provides a command-line interface for interacting with Apple's container CLI, offering both visual animations and practical command execution capabilities.
+
+## Terminal Components
+
+Container Kit's terminal system is built with several components:
+
+### Terminal Session
+
+Manage terminal sessions with timing and animation control:
+
+```typescript
+import { TerminalSession } from '$lib/components/ui/terminal/terminal.svelte';
+
+const session = new TerminalSession({
+  delay: 500,           // Initial delay before animation starts
+  speed: 50,            // Animation speed in milliseconds
+  onComplete: () => {   // Callback when session completes
+    console.log('Session complete');
+  }
+});
+
+// Start the terminal session
+session.play();
+
+// Clean up when done
+session.dispose();
+```
+
+### Terminal Loop
+
+Create looping terminal animations:
+
+```typescript
+import { TerminalLoop } from '$lib/components/ui/terminal/terminal.svelte';
+
+const loop = new TerminalLoop({
+  onComplete: () => {
+    console.log('Loop iteration complete');
+  }
+});
+```
+
+## Container Commands
+
+The terminal interface can execute all container operations:
+
+<Tabs>
+  <Tab title="Container Management">
+    Execute container lifecycle commands:
+
+    ```bash
+    # List all containers
+    container ls -a --format json
+    
+    # Start a container
+    container start <container-id>
+    
+    # Stop a container
+    container stop <container-id>
+    
+    # Remove a container
+    container rm <container-id>
+    
+    # Inspect container
+    container inspect <container-id>
+    
+    # View container logs
+    container logs <container-id>
+    ```
+
+    These commands correspond to the programmatic functions:
+    ```typescript
+    import {
+      getAllContainers,
+      startContainer,
+      stopContainer,
+      removeContainer,
+      inspectContainer,
+      getContainerLogs
+    } from '$lib/services/containerization/containers';
+    ```
+  </Tab>
+
+  <Tab title="Image Operations">
+    Manage container images:
+
+    ```bash
+    # List images
+    container image ls --format json
+    
+    # Pull an image
+    container image pull redis:latest
+    
+    # Remove image
+    container image rm nginx:alpine
+    
+    # Inspect image
+    container image inspect postgres:15
+    
+    # Export image to tar
+    container image save --arch aarch64 --output /path/image.tar redis
+    
+    # Import image from tar
+    container image load -i /path/image.tar
+    ```
+
+    Programmatic equivalents:
+    ```typescript
+    import {
+      getAllImages,
+      pullImage,
+      removeImage,
+      inspectImage,
+      exportImageToTar,
+      importImageFromTar
+    } from '$lib/services/containerization/images';
+    ```
+  </Tab>
+
+  <Tab title="DNS & Registry">
+    Configure DNS and registry settings:
+
+    ```bash
+    # DNS operations
+    container s dns create example.local
+    container s dns ls
+    
+    # Registry operations
+    container registry default inspect
+    container registry default set docker.io
+    container registry default unset docker.io
+    
+    # Registry authentication
+    container registry login --username user --password-stdin docker.io
+    container registry logout docker.io
+    ```
+
+    Programmatic access:
+    ```typescript
+    import { createDns, getAllDnsConfig } from '$lib/services/containerization/dns';
+    import { getDefaultRegistry, setDefaultRegistry } from '$lib/services/containerization/registry/default';
+    import { registryLogin, registryLogout } from '$lib/services/containerization/registry/auth';
+    ```
+  </Tab>
+</Tabs>
+
+## Terminal UI Components
+
+Container Kit provides several terminal UI components:
+
+### Header Components
+
+- **Header Icon** - Visual indicator for terminal window
+- **Traffic Lights** - macOS-style window controls
+- **Session Badge** - Display session status and information
+
+### Tab Management
+
+- **Tab Controls** - Create, close, and manage terminal tabs
+- **Tab Item** - Individual tab representation
+- **Tabs Bar** - Container for multiple terminal tabs
+
+### Terminal Display
+
+- **Terminal** - Main terminal interface component
+- **Typing Animation** - Animated command typing effect
+- **Loading Animation** - Visual loading indicators
+- **Animated Span** - Individual character animations
+
+## Command Execution
+
+The terminal executes commands using the container CLI:
+
+```typescript
+import { Command } from '@tauri-apps/plugin-shell';
+
+// Create command
+const command = Command.create('container', ['ls', '-a']);
+
+// Execute and get output
+const output = await command.execute();
+
+console.log('stdout:', output.stdout);
+console.log('stderr:', output.stderr);
+console.log('exit code:', output.code);
+```
+
+## Terminal Utilities
+
+### Command Creation
+
+Create container commands programmatically:
+
+```typescript
+import { createContainerCommand } from '$lib/services/containerization/utils';
+
+// Create a command
+const command = createContainerCommand(['image', 'ls']);
+
+// Execute it
+const output = await command.execute();
+```
+
+### Output Validation
+
+Validate command output:
+
+```typescript
+import { validateCommandOutput } from '$lib/services/containerization/utils';
+import type { Output } from '$lib/services/containerization/models';
+
+const command = createContainerCommand(['ls']);
+const result = await command.execute();
+
+// Validate and get typed output
+const output: Output = validateCommandOutput(result);
+
+if (output.error) {
+  console.error('Command failed:', output.stderr);
+} else {
+  console.log('Command output:', output.stdout);
+}
+```
+
+## Interactive Terminal Features
+
+### Real-time Log Viewing
+
+Stream container logs in the terminal:
+
+```typescript
+import { getContainerLogs } from '$lib/services/containerization/containers';
+
+const result = await getContainerLogs('container-id');
+
+if (!result.error) {
+  // Display logs in terminal
+  console.log(result.stdout);
+}
+```
+
+### Command History
+
+Container Kit can maintain command history for terminal sessions, allowing you to:
+
+- Review previously executed commands
+- Re-run common operations
+- Track command sequences
+- Debug container operations
+
+## Terminal Session Management
+
+<CodeGroup>
+```typescript Create Session
+import { useTerminalRoot } from '$lib/components/ui/terminal/terminal.svelte';
+
+const session = useTerminalRoot({
+  delay: 1000,
+  speed: 30,
+  onComplete: () => {
+    console.log('Terminal animation complete');
+  }
+});
+```
+
+```typescript Animation Control
+import { useAnimation } from '$lib/components/ui/terminal/terminal.svelte';
+
+const animation = useAnimation({
+  delay: 500,
+  play: (speed) => {
+    // Custom animation logic
+    console.log('Playing at speed:', speed);
+  }
+});
+```
+
+```typescript Looped Sessions
+import { useTerminalLoop } from '$lib/components/ui/terminal/terminal.svelte';
+
+const loop = useTerminalLoop({
+  onComplete: () => {
+    // Restart or handle loop completion
+  }
+});
+```
+</CodeGroup>
+
+## Common Terminal Workflows
+
+### Container Lifecycle
+
+```bash
+# Check running containers
+container ls
+
+# Inspect specific container
+container inspect web-container
+
+# View logs
+container logs web-container
+
+# Stop container
+container stop web-container
+
+# Remove container
+container rm web-container
+```
+
+### Image Management
+
+```bash
+# Search for images
+container image ls
+
+# Pull latest image
+container image pull nginx:alpine
+
+# Inspect image details
+container image inspect nginx:alpine
+
+# Clean up unused images
+container image rm old-image:tag
+```
+
+### Network Debugging
+
+```bash
+# Inspect container with network details
+container inspect container-id
+
+# View DNS configuration
+container s dns ls
+
+# Check registry settings
+container registry default inspect
+```
+
+## Terminal Best Practices
+
+### Command Execution
+
+- Use `--format json` for parseable output
+- Check exit codes for error handling
+- Validate command output before processing
+- Use specific container IDs instead of names
+
+### Session Management
+
+- Dispose sessions when complete
+- Handle animation callbacks properly
+- Set appropriate delays and speeds
+- Clean up event listeners
+
+### Error Handling
+
+- Check `stderr` for error messages
+- Validate command success before proceeding
+- Provide user feedback for long operations
+- Log terminal errors for debugging
+
+## Advanced Terminal Features
+
+### Elevated Commands
+
+Some commands require elevated privileges:
+
+```typescript
+import { commands } from '$lib/models/bindings';
+
+// Execute with elevated permissions
+const result = await commands.executeWithElevatedCommand('container', [
+  's',
+  'dns',
+  'create',
+  'example.local'
+]);
+
+if (result.status === 'ok') {
+  console.log('Command executed successfully');
+} else {
+  console.error('Failed:', result.error);
+}
+```
+
+### Command with Input
+
+Pass data to commands via stdin:
+
+```typescript
+import { commands } from '$lib/models/bindings';
+
+// Login with password via stdin
+const result = await commands.runContainerCommandWithStdin(
+  ['registry', 'login', '--username', 'user', '--password-stdin', 'docker.io'],
+  'secure-password'
+);
+```
+
+## Terminal Customization
+
+Customize terminal appearance and behavior:
+
+- **Animation Speed** - Control typing animation speed
+- **Delay Timing** - Set delays between commands
+- **Visual Theme** - Match Container Kit's dark/light themes
+- **Font Settings** - Monospace font optimization
+
+<Info>
+  The built-in terminal uses the same container CLI (`container` command) that Container Kit's programmatic API uses, ensuring consistency between UI and code operations.
+</Info>
+
+## Related Features
+
+- [Containers](/features/containers) - Container lifecycle operations
+- [Images](/features/images) - Image management commands
+- [DNS](/features/dns) - DNS configuration via terminal
+- [Registry](/features/registry) - Registry authentication

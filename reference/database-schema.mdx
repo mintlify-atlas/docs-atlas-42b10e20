@@ -1,0 +1,276 @@
+---
+title: Database Schema
+description: SQLite database schema reference using Drizzle ORM
+---
+
+Container Kit uses SQLite with Drizzle ORM for local data persistence. The database stores registry configurations and tracks migration state.
+
+## Schema Location
+
+The database schema is defined in `src/lib/db/schema.ts` using Drizzle ORM's declarative syntax.
+
+## Tables
+
+### registry
+
+Stores container registry configurations and authentication state.
+
+```typescript
+export const registry = sqliteTable('registry', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  name: text('name').notNull(),
+  url: text('url').unique().notNull(),
+  loggedIn: integer('logged_in', { mode: 'boolean' }).default(false)
+});
+```
+
+#### Columns
+
+<ParamField path="id" type="text" required>
+  Primary key, auto-generated UUID v7
+  
+  - Generated using `uuid()` from the `uuid` package
+  - Version 7 UUIDs are time-sortable
+</ParamField>
+
+<ParamField path="name" type="text" required>
+  Display name for the registry
+  
+  - User-friendly identifier
+  - Not unique (multiple entries could have the same name)
+  - Cannot be null
+</ParamField>
+
+<ParamField path="url" type="text" required>
+  Registry URL
+  
+  - Must be unique across all registry entries
+  - Examples: `docker.io`, `ghcr.io`, `quay.io`
+  - Cannot be null
+</ParamField>
+
+<ParamField path="loggedIn" type="boolean">
+  Authentication status
+  
+  - Stored as SQLite integer (0 = false, 1 = true)
+  - Defaults to `false`
+  - Indicates whether the user is currently authenticated
+</ParamField>
+
+#### Constraints
+
+- **Primary Key:** `id`
+- **Unique:** `url`
+- **Not Null:** `name`, `url`
+
+#### Usage Example
+
+```typescript
+import { db } from '$lib/db';
+import { registry } from '$lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+// Insert a new registry
+await db.insert(registry).values({
+  name: 'Docker Hub',
+  url: 'docker.io',
+  loggedIn: false
+});
+
+// Query all registries
+const allRegistries = await db.select().from(registry);
+
+// Update login status
+await db
+  .update(registry)
+  .set({ loggedIn: true })
+  .where(eq(registry.url, 'docker.io'));
+
+// Delete a registry
+await db
+  .delete(registry)
+  .where(eq(registry.url, 'docker.io'));
+```
+
+### seeds
+
+Tracks database migration and seed script execution.
+
+```typescript
+export const seeds = sqliteTable('seeds', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => uuid()),
+  name: text('name').notNull().unique(),
+  applied: integer('applied', { mode: 'boolean' }).default(false)
+});
+```
+
+#### Columns
+
+<ParamField path="id" type="text" required>
+  Primary key, auto-generated UUID v7
+  
+  - Generated using `uuid()` from the `uuid` package
+  - Unique identifier for each seed entry
+</ParamField>
+
+<ParamField path="name" type="text" required>
+  Seed script name
+  
+  - Must be unique
+  - Identifies the migration or seed file
+  - Cannot be null
+</ParamField>
+
+<ParamField path="applied" type="boolean">
+  Whether the seed has been applied
+  
+  - Stored as SQLite integer (0 = false, 1 = true)
+  - Defaults to `false`
+  - Prevents duplicate migrations
+</ParamField>
+
+#### Constraints
+
+- **Primary Key:** `id`
+- **Unique:** `name`
+- **Not Null:** `name`
+
+#### Usage Example
+
+```typescript
+import { db } from '$lib/db';
+import { seeds } from '$lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+// Check if a migration has been applied
+const migration = await db
+  .select()
+  .from(seeds)
+  .where(eq(seeds.name, '001_initial_schema'))
+  .limit(1);
+
+if (!migration.length || !migration[0].applied) {
+  // Run migration
+  await runMigration();
+  
+  // Mark as applied
+  await db.insert(seeds).values({
+    name: '001_initial_schema',
+    applied: true
+  });
+}
+```
+
+## Database Configuration
+
+The database is configured using Drizzle ORM with LibSQL client.
+
+### Connection
+
+```typescript
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+
+const client = createClient({
+  url: 'file:local.db'
+});
+
+export const db = drizzle(client);
+```
+
+### Migrations
+
+Migrations are managed through Drizzle Kit:
+
+```bash
+# Generate migration files
+pnpm db:generate
+
+# Generate Rust migration code
+pnpm db:migrations:rust
+```
+
+## Type Safety
+
+Drizzle ORM provides full TypeScript type safety:
+
+```typescript
+import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import { registry, seeds } from '$lib/db/schema';
+
+// Inferred types for select queries
+type Registry = InferSelectModel<typeof registry>;
+type Seed = InferSelectModel<typeof seeds>;
+
+// Inferred types for insert operations
+type InsertRegistry = InferInsertModel<typeof registry>;
+type InsertSeed = InferInsertModel<typeof seeds>;
+```
+
+### Registry Type
+
+```typescript
+type Registry = {
+  id: string;
+  name: string;
+  url: string;
+  loggedIn: boolean | null;
+};
+```
+
+### InsertRegistry Type
+
+```typescript
+type InsertRegistry = {
+  id?: string; // Optional, auto-generated
+  name: string;
+  url: string;
+  loggedIn?: boolean | null;
+};
+```
+
+## Query Builder
+
+Drizzle provides a type-safe query builder:
+
+```typescript
+import { db } from '$lib/db';
+import { registry } from '$lib/db/schema';
+import { eq, and, or, like } from 'drizzle-orm';
+
+// Select all
+const all = await db.select().from(registry);
+
+// Select with conditions
+const loggedIn = await db
+  .select()
+  .from(registry)
+  .where(eq(registry.loggedIn, true));
+
+// Complex queries
+const results = await db
+  .select()
+  .from(registry)
+  .where(
+    and(
+      eq(registry.loggedIn, true),
+      or(
+        like(registry.url, '%docker.io%'),
+        like(registry.url, '%ghcr.io%')
+      )
+    )
+  );
+```
+
+## Database Location
+
+The SQLite database file is stored locally:
+
+- **Development:** Project directory
+- **Production:** Application data directory (platform-specific)
+
+Tauri's SQL plugin manages the database file location automatically.

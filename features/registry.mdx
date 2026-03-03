@@ -1,0 +1,435 @@
+---
+title: Registry Management
+description: Authenticate with container registries, configure default registries, and manage registry credentials
+---
+
+Container Kit provides comprehensive registry management for pulling and pushing container images from public and private registries. Configure authentication, set default registries, and manage multiple registry credentials.
+
+## Overview
+
+The registry system integrates with Apple's container CLI to support Docker Hub, GitHub Container Registry (GHCR), Quay.io, and other OCI-compatible registries.
+
+## Registry Operations
+
+### Default Registry
+
+Manage the default registry for image operations:
+
+<Tabs>
+  <Tab title="Inspect">
+    View the current default registry configuration:
+
+    ```typescript
+    import { getDefaultRegistry } from '$lib/services/containerization/registry/default';
+
+    const result = await getDefaultRegistry();
+    
+    if (!result.error) {
+      const registry = JSON.parse(result.stdout);
+      console.log('Default registry:', registry);
+    }
+    ```
+
+    Executes:
+    ```bash
+    container registry default inspect
+    ```
+  </Tab>
+
+  <Tab title="Set">
+    Configure a default registry:
+
+    ```typescript
+    import { setDefaultRegistry } from '$lib/services/containerization/registry/default';
+
+    // Set Docker Hub as default
+    const result = await setDefaultRegistry('docker.io');
+    
+    // Set GitHub Container Registry
+    const result = await setDefaultRegistry('ghcr.io');
+    
+    // Set private registry
+    const result = await setDefaultRegistry('registry.company.com');
+    
+    if (!result.error) {
+      console.log('Default registry updated');
+    }
+    ```
+
+    Executes:
+    ```bash
+    container registry default set docker.io
+    ```
+  </Tab>
+
+  <Tab title="Unset">
+    Remove the default registry configuration:
+
+    ```typescript
+    import { 
+      unsetDefaultRegistry,
+      removeDefaultRegistry,
+      clearDefaultRegistry 
+    } from '$lib/services/containerization/registry/default';
+
+    // All three functions are equivalent
+    const result = await unsetDefaultRegistry('docker.io');
+    
+    if (!result.error) {
+      console.log('Default registry cleared');
+    }
+    ```
+
+    Executes:
+    ```bash
+    container registry default unset docker.io
+    ```
+  </Tab>
+</Tabs>
+
+## Authentication
+
+### Registry Login
+
+Authenticate with a container registry:
+
+```typescript
+import { registryLogin } from '$lib/services/containerization/registry/auth';
+
+const result = await registryLogin({
+  registry: 'docker.io',
+  username: 'your-username',
+  password: 'your-password',
+  scheme: 'auto'  // or 'http', 'https'
+});
+
+if (!result.error) {
+  console.log('Successfully authenticated');
+} else {
+  console.error('Login failed:', result.stderr);
+}
+```
+
+### Login Parameters
+
+```typescript
+type RegistryLoginParams = {
+  registry: string;    // Registry hostname
+  username: string;    // Registry username
+  password: string;    // Registry password or token
+  scheme?: string;     // 'auto', 'http', or 'https' (default: 'auto')
+};
+```
+
+### Secure Password Handling
+
+The login function uses `--password-stdin` for secure password input:
+
+```typescript
+// Password is passed via stdin, never exposed in process list
+const result = await registryLogin({
+  registry: 'ghcr.io',
+  username: 'github-user',
+  password: process.env.GITHUB_TOKEN,  // Use environment variable
+  scheme: 'https'
+});
+```
+
+<Note>
+  Always use environment variables or secure credential storage for passwords. Never hardcode credentials in source code.
+</Note>
+
+## Registry Logout
+
+Remove stored credentials for a registry:
+
+```typescript
+import { registryLogout } from '$lib/services/containerization/registry/auth';
+
+const result = await registryLogout({
+  registry: 'docker.io'
+});
+
+if (!result.error) {
+  console.log('Successfully logged out');
+}
+```
+
+### Logout Parameters
+
+```typescript
+type RegistryLogoutParams = {
+  registry: string;  // Registry hostname to logout from
+};
+```
+
+## Supported Registries
+
+<Card title="Docker Hub" icon="docker">
+  **Registry:** `docker.io`
+  
+  Default public registry with millions of images. Requires authentication for private repositories and higher pull limits.
+</Card>
+
+<Card title="GitHub Container Registry" icon="github">
+  **Registry:** `ghcr.io`
+  
+  GitHub's container registry. Use GitHub personal access tokens for authentication.
+</Card>
+
+<Card title="Quay.io" icon="server">
+  **Registry:** `quay.io`
+  
+  Red Hat's container registry with enterprise features.
+</Card>
+
+<Card title="Private Registry" icon="lock">
+  **Registry:** `registry.company.com`
+  
+  Self-hosted or enterprise registries. Support HTTP and HTTPS schemes.
+</Card>
+
+## Common Workflows
+
+### Authenticate and Pull
+
+```typescript
+import { registryLogin } from '$lib/services/containerization/registry/auth';
+import { pullImage } from '$lib/services/containerization/images';
+
+// 1. Authenticate
+const loginResult = await registryLogin({
+  registry: 'ghcr.io',
+  username: 'your-username',
+  password: process.env.GITHUB_TOKEN
+});
+
+if (loginResult.error) {
+  throw new Error('Authentication failed');
+}
+
+// 2. Pull private image
+const pullResult = await pullImage(['ghcr.io/your-org/private-image:latest']);
+
+if (!pullResult.error) {
+  console.log('Private image pulled successfully');
+}
+```
+
+### Multiple Registry Management
+
+```typescript
+import { registryLogin, registryLogout } from '$lib/services/containerization/registry/auth';
+
+const registries = [
+  {
+    registry: 'docker.io',
+    username: process.env.DOCKER_USERNAME,
+    password: process.env.DOCKER_PASSWORD
+  },
+  {
+    registry: 'ghcr.io',
+    username: process.env.GITHUB_USERNAME,
+    password: process.env.GITHUB_TOKEN
+  },
+  {
+    registry: 'quay.io',
+    username: process.env.QUAY_USERNAME,
+    password: process.env.QUAY_PASSWORD
+  }
+];
+
+// Login to all registries
+for (const creds of registries) {
+  const result = await registryLogin(creds);
+  if (result.error) {
+    console.error(`Failed to login to ${creds.registry}`);
+  } else {
+    console.log(`✓ Authenticated with ${creds.registry}`);
+  }
+}
+```
+
+### Switch Default Registry
+
+```typescript
+import { setDefaultRegistry, getDefaultRegistry } from '$lib/services/containerization/registry/default';
+
+// Check current default
+const current = await getDefaultRegistry();
+console.log('Current default:', current.stdout);
+
+// Switch to GitHub Container Registry
+await setDefaultRegistry('ghcr.io');
+
+// Verify change
+const updated = await getDefaultRegistry();
+console.log('New default:', updated.stdout);
+```
+
+## Authentication Schemes
+
+The `scheme` parameter controls the protocol:
+
+<CodeGroup>
+```typescript Auto (Recommended)
+// Automatically detect HTTP or HTTPS
+const result = await registryLogin({
+  registry: 'docker.io',
+  username: 'user',
+  password: 'pass',
+  scheme: 'auto'
+});
+```
+
+```typescript HTTPS
+// Force HTTPS (recommended for production)
+const result = await registryLogin({
+  registry: 'ghcr.io',
+  username: 'user',
+  password: 'token',
+  scheme: 'https'
+});
+```
+
+```typescript HTTP
+// Force HTTP (local registries only)
+const result = await registryLogin({
+  registry: 'localhost:5000',
+  username: 'user',
+  password: 'pass',
+  scheme: 'http'
+});
+```
+</CodeGroup>
+
+<Info>
+  Use `scheme: 'auto'` for most cases. The container CLI will automatically detect the appropriate protocol. Use `'https'` explicitly for security-critical environments.
+</Info>
+
+## GitHub Container Registry Setup
+
+### Create Personal Access Token
+
+1. Go to GitHub Settings → Developer settings → Personal access tokens
+2. Generate new token with `read:packages` and `write:packages` scopes
+3. Save token securely
+
+### Authenticate
+
+```typescript
+import { registryLogin } from '$lib/services/containerization/registry/auth';
+
+const result = await registryLogin({
+  registry: 'ghcr.io',
+  username: 'your-github-username',
+  password: 'ghp_your_personal_access_token',
+  scheme: 'https'
+});
+```
+
+### Pull from GHCR
+
+```typescript
+import { pullImage } from '$lib/services/containerization/images';
+
+// Pull public image
+await pullImage(['ghcr.io/owner/public-image:tag']);
+
+// Pull private image (requires authentication)
+await pullImage(['ghcr.io/owner/private-image:tag']);
+```
+
+## Error Handling
+
+Handle authentication errors properly:
+
+```typescript
+const result = await registryLogin({
+  registry: 'docker.io',
+  username: 'user',
+  password: 'pass'
+});
+
+if (result.error) {
+  // Common errors:
+  if (result.stderr.includes('unauthorized')) {
+    console.error('Invalid credentials');
+  } else if (result.stderr.includes('connection')) {
+    console.error('Network error - check registry availability');
+  } else if (result.stderr.includes('timeout')) {
+    console.error('Request timeout - check network connection');
+  } else {
+    console.error('Login failed:', result.stderr);
+  }
+} else {
+  console.log('Login successful');
+}
+```
+
+## Best Practices
+
+### Security
+
+- Never hardcode passwords or tokens in source code
+- Use environment variables for credentials
+- Rotate access tokens regularly
+- Use read-only tokens when write access is not needed
+- Logout when credentials are no longer needed
+
+### Credential Management
+
+- Store credentials in secure credential managers
+- Use different credentials for different environments
+- Implement credential rotation policies
+- Monitor authentication logs
+
+### Registry Configuration
+
+- Set default registry for your organization
+- Document registry requirements
+- Use HTTPS for production registries
+- Test authentication before deployments
+
+## Troubleshooting
+
+### Authentication Failures
+
+```typescript
+// Verify credentials work
+const result = await registryLogin({
+  registry: 'docker.io',
+  username: process.env.DOCKER_USERNAME,
+  password: process.env.DOCKER_PASSWORD
+});
+
+if (result.error) {
+  console.log('Error details:', result.stderr);
+  console.log('Check:');
+  console.log('- Credentials are correct');
+  console.log('- Registry URL is correct');
+  console.log('- Network connection is available');
+  console.log('- Token has not expired');
+}
+```
+
+### Registry Connectivity
+
+```typescript
+import { getDefaultRegistry } from '$lib/services/containerization/registry/default';
+
+// Check default registry configuration
+const result = await getDefaultRegistry();
+
+if (!result.error) {
+  console.log('Registry accessible:', result.stdout);
+} else {
+  console.error('Cannot access registry:', result.stderr);
+}
+```
+
+## Related Features
+
+- [Images](/features/images) - Pull and manage images from registries
+- [DNS](/features/dns) - Configure DNS for registry resolution
+- [Terminal](/features/terminal) - Run registry commands directly

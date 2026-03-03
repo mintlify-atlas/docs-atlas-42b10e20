@@ -1,0 +1,326 @@
+---
+title: 'Application Architecture'
+description: 'Deep dive into Container Kit architecture - Tauri, Svelte 5, and database layer'
+---
+
+Container Kit is built on a modern desktop application stack combining Rust's performance and safety with Svelte's reactive frontend framework.
+
+## Technology Stack
+
+### Frontend Stack
+
+- **Svelte 5** - Latest reactivity system with runes
+- **SvelteKit** - Full-stack framework with SSG (Static Site Generation)
+- **TailwindCSS 4.x** - Utility-first CSS with custom themes
+- **TypeScript** - Strict typing throughout the application
+- **Bits UI** - Headless UI component library
+- **LayerChart** - Data visualization with d3-scale and d3-shape
+
+### Backend Stack
+
+- **Tauri 2.x** - Rust-based desktop application framework
+- **Rust** - Systems programming for performance and memory safety
+- **LibSQL** - SQLite-compatible embedded database
+- **Drizzle ORM** - Type-safe database operations
+- **tokio** - Async runtime for Rust
+
+### Build Tools
+
+- **Vite 6** - Fast build tool and development server
+- **pnpm** - Fast, disk space efficient package manager
+- **TypeScript** - Build automation scripts
+
+## Project Structure
+
+Container Kit follows a modular architecture with clear separation between frontend and backend:
+
+```
+ContainerKit/
+├── src/                          # Svelte frontend
+│   ├── lib/
+│   │   ├── components/          # UI components (atomic design)
+│   │   │   ├── ui/              # Base UI components
+│   │   │   ├── features/        # Feature-specific components
+│   │   │   └── layout/          # Layout components
+│   │   ├── db/                  # Database schema and types
+│   │   │   ├── schema.ts        # Drizzle schema definitions
+│   │   │   ├── index.ts         # Database client
+│   │   │   └── types.ts         # TypeScript type definitions
+│   │   ├── services/            # Apple container APIs
+│   │   │   ├── containerization/ # Container operations
+│   │   │   ├── sqlite/          # Database operations
+│   │   │   ├── fs-events/       # File system watchers
+│   │   │   └── tray/            # System tray integration
+│   │   ├── stores/              # Svelte stores
+│   │   └── utils/               # Utility functions
+│   ├── routes/                  # SvelteKit routes
+│   │   ├── (app)/               # Main application routes
+│   │   └── api/                 # API endpoints
+│   └── themes/                  # Custom CSS themes
+├── src-tauri/                   # Rust/Tauri backend
+│   ├── src/
+│   │   ├── commands/            # Tauri commands
+│   │   ├── types.rs             # Rust type definitions
+│   │   ├── lib.rs               # Library entry point
+│   │   └── main.rs              # Application entry point
+│   ├── migrations/              # SQL migration files
+│   ├── binaries/                # Sidecar binaries (Apple Container CLI)
+│   ├── tauri.conf.json         # Tauri configuration
+│   └── Cargo.toml              # Rust dependencies
+└── scripts/                     # Build and automation scripts
+```
+
+## Tauri Architecture
+
+### Application Entry Point
+
+The Rust backend initializes with an async runtime and loads the Tauri application:
+
+<CodeGroup>
+```rust src-tauri/src/main.rs
+#[tokio::main]
+async fn main() {
+    let _ = fix_path_env::fix();
+    container_kit_lib::run().await;
+}
+```
+
+```rust src-tauri/src/lib.rs
+pub async fn run() {
+    let migrations = load_migrations();
+
+    let spectabuilder = Builder::<tauri::Wry>::new().commands(collect_commands![
+        greet,
+        run_container_command_with_stdin,
+        execute_with_elevated_command,
+        get_default_shell,
+        stream_container_command
+    ]);
+
+    builder
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_sql::Builder::default()
+            .add_migrations("sqlite:container-kit.db", migrations)
+            .build())
+        .invoke_handler(spectabuilder.invoke_handler())
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+</CodeGroup>
+
+### Tauri Plugins
+
+Container Kit uses multiple Tauri plugins for platform integration:
+
+| Plugin | Purpose |
+|--------|--------|
+| `tauri-plugin-sql` | SQLite database with migrations |
+| `tauri-plugin-shell` | Execute shell commands |
+| `tauri-plugin-pty` | PTY/terminal support |
+| `tauri-plugin-fs` | File system operations with watchers |
+| `tauri-plugin-window-state` | Persist window state |
+| `tauri-plugin-store` | Key-value storage |
+| `tauri-plugin-clipboard-manager` | Clipboard access |
+| `tauri-plugin-updater` | Auto-update functionality |
+| `tauri-plugin-devtools` | Development tools (debug only) |
+
+### Tauri Commands
+
+Tauri commands bridge the frontend and backend, providing type-safe APIs using Specta:
+
+```rust src-tauri/src/commands/system.rs
+use crate::types::CommandResult;
+use elevated_command::Command;
+
+#[tauri::command]
+#[specta::specta]
+pub async fn execute_with_elevated_command(
+    command: String,
+    args: Vec<String>,
+) -> Result<CommandResult, String> {
+    let is_elevated = Command::is_elevated();
+
+    let mut cmd = StdCommand::new(&command);
+    cmd.args(&args);
+
+    let output = if is_elevated {
+        cmd.output().map_err(|e| e.to_string())?
+    } else {
+        let mut elevated_cmd = Command::new(cmd);
+        elevated_cmd.name("ContainerKit".to_string());
+        elevated_cmd.output().map_err(|e| e.to_string())?
+    };
+
+    Ok(CommandResult {
+        signal: output.status.signal(),
+        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+        code: output.status.code(),
+    })
+}
+```
+
+<Note>
+All Tauri commands are automatically typed in TypeScript using `tauri-specta`, generating type-safe bindings in `src/lib/models/bindings.ts`.
+</Note>
+
+## Svelte 5 Frontend
+
+### Reactivity with Runes
+
+Container Kit uses Svelte 5's new runes syntax for state management:
+
+```svelte
+<script lang="ts">
+    interface Props {
+        title: string;
+        isActive?: boolean;
+    }
+
+    let { title, isActive = false }: Props = $props();
+</script>
+
+<h1 class={isActive ? 'active' : 'inactive'}>{title}</h1>
+```
+
+### Service Layer
+
+The frontend uses a service layer to communicate with the container CLI:
+
+```typescript src/lib/services/containerization/containers.ts
+import { Command } from '@tauri-apps/plugin-shell';
+import type { Output } from './models';
+
+export function createContainerCommand(args: string[]): Command<string> {
+    return Command.create('container', args);
+}
+
+export async function getAllContainers(): Promise<Output> {
+    const command = createContainerCommand(['ls', '-a', '--format', 'json']);
+    const output = await command.execute();
+    return validateCommandOutput(output);
+}
+
+export async function startContainer(id: string): Promise<Output> {
+    const command = createContainerCommand(['start', id]);
+    const output = await command.execute();
+    return validateCommandOutput(output);
+}
+```
+
+### Type-Safe Database Access
+
+The frontend uses Drizzle ORM with Tauri's SQL plugin for type-safe database operations:
+
+```typescript src/lib/db/index.ts
+import { drizzle } from 'drizzle-orm/sqlite-proxy';
+import Database from '@tauri-apps/plugin-sql';
+import * as schema from './schema';
+
+export const db = drizzle<typeof schema>(
+    async (sql: string, params: string[], method: string) => {
+        const sqlite = await Database.load('sqlite:container-kit.db');
+        let rows: any[] = [];
+
+        try {
+            if (isSelectQuery(sql)) {
+                rows = await sqlite.select(sql, params);
+            } else {
+                await sqlite.execute(sql, params);
+                return { rows: [] };
+            }
+
+            rows = rows.map((row: any) => Object.values(row));
+            return { rows: method === 'all' ? rows : rows[0] };
+        } finally {
+            await sqlite.close();
+        }
+    },
+    { schema: schema, logger: true }
+);
+```
+
+## Build System
+
+### Development Workflow
+
+```bash
+# Frontend development with hot reload
+pnpm dev
+
+# Tauri development mode
+pnpm tauri dev
+
+# Type checking
+pnpm check
+
+# Format code
+pnpm format
+```
+
+### Production Build
+
+The build process generates database migrations, builds the frontend, and compiles the Rust backend:
+
+```bash
+# Generate database migrations
+pnpm db:generate
+
+# Build frontend and Tauri app
+pnpm tauri:build
+```
+
+<Note>
+Container Kit requires **macOS 26.0+** with **Apple Silicon** (M1/M2/M3/M4). Intel Macs are not supported.
+</Note>
+
+## Configuration
+
+### Tauri Configuration
+
+Key configuration from `tauri.conf.json`:
+
+```json
+{
+  "identifier": "com.ethercorps.container-kit",
+  "version": "0.10.0",
+  "bundle": {
+    "category": "DeveloperTool",
+    "macOS": {
+      "minimumSystemVersion": "26.0"
+    },
+    "externalBin": [
+      "binaries/sidecar/apple-container/bin/container"
+    ]
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:container-kit.db"]
+    }
+  }
+}
+```
+
+### Sidecar Binaries
+
+Container Kit bundles the Apple Container CLI as a sidecar binary, allowing the app to execute container operations without requiring system-wide installation.
+
+## Component Architecture
+
+Container Kit follows atomic design principles:
+
+- **UI Components** (`src/lib/components/ui/`) - Base components from Bits UI and shadcn-svelte
+- **Feature Components** (`src/lib/components/features/`) - Domain-specific components (containers, images, networks)
+- **Layout Components** (`src/lib/components/layout/`) - Page layouts and navigation
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Schema" icon="database" href="/advanced/database">
+    Learn about the database architecture with Drizzle ORM
+  </Card>
+  <Card title="Security" icon="shield" href="/advanced/security">
+    Understand Tauri's security model and sandboxing
+  </Card>
+</CardGroup>

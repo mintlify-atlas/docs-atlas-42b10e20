@@ -1,0 +1,512 @@
+---
+title: "Networking"
+description: "Configure container networks, DNS settings, and connectivity in Container Kit"
+---
+
+## Overview
+
+Container Kit provides networking capabilities for connecting containers to each other and the outside world. This guide covers network configuration, DNS settings, and connectivity troubleshooting.
+
+<Note>
+  Container networking in Container Kit uses Apple's native containerization networking system, which differs from traditional Docker networking.
+</Note>
+
+## Understanding Container Networking
+
+Container networking enables:
+- **Container-to-container** communication
+- **Container-to-host** communication
+- **Container-to-internet** communication
+- **Port mapping** for external access
+- **DNS resolution** for service discovery
+
+### Network Isolation
+
+Each container has:
+- Its own network namespace
+- Isolated network stack
+- Virtual network interfaces
+- Separate routing table
+
+## Network Types
+
+Container Kit supports several network configurations:
+
+### Default Network
+
+Containers automatically connect to the default network:
+- Automatic IP assignment
+- Container-to-container communication
+- Internet access via NAT
+- DNS resolution
+
+### Bridge Network
+
+The bridge network provides:
+- Isolated network segment
+- Internal IP addresses (e.g., 192.168.65.0/24)
+- Port mapping to host
+- DNS service for container names
+
+### Host Network (Coming Soon)
+
+Containers share the host's network stack:
+- No network isolation
+- Direct access to host interfaces
+- No port mapping needed
+- Higher performance
+
+<Warning>
+  Host networking reduces container isolation and may pose security risks. Use with caution.
+</Warning>
+
+## Port Mapping
+
+Expose container ports to the host system and external network.
+
+### Configure Port Mapping
+
+When creating a container, map ports:
+
+<Steps>
+  <Step title="Open Container Creation">
+    Click **Containers** > **New Container**.
+  </Step>
+  
+  <Step title="Add Port Mappings">
+    In the Port Mapping section, specify:
+    
+    - **Host Port** - Port on your Mac (e.g., 8080)
+    - **Container Port** - Port inside container (e.g., 80)
+    - **Protocol** - TCP or UDP
+    
+    Example mapping:
+    ```
+    Host Port: 8080 → Container Port: 80 (TCP)
+    ```
+    
+    This maps localhost:8080 to port 80 inside the container.
+  </Step>
+  
+  <Step title="Add Multiple Ports">
+    Click **Add Port** to map additional ports:
+    
+    ```
+    8080:80   - HTTP traffic
+    8443:443  - HTTPS traffic
+    3306:3306 - Database
+    ```
+  </Step>
+</Steps>
+
+### Port Mapping Syntax
+
+```bash
+# Standard syntax
+[host_ip:]host_port:container_port[/protocol]
+
+# Examples
+8080:80              # Map host 8080 to container 80 (TCP)
+127.0.0.1:8080:80   # Bind to localhost only
+3306:3306/tcp       # Explicit TCP protocol
+53:53/udp           # UDP protocol for DNS
+```
+
+<Tip>
+  Use high port numbers (above 1024) for host ports to avoid requiring administrator privileges.
+</Tip>
+
+### Common Port Mappings
+
+| Service | Container Port | Suggested Host Port |
+|---------|---------------|--------------------|
+| HTTP | 80 | 8080 |
+| HTTPS | 443 | 8443 |
+| MySQL | 3306 | 3306 |
+| PostgreSQL | 5432 | 5432 |
+| Redis | 6379 | 6379 |
+| MongoDB | 27017 | 27017 |
+
+<Warning>
+  Avoid mapping to privileged ports (1-1023) on the host without administrator access. Port conflicts will prevent container startup.
+</Warning>
+
+## DNS Configuration
+
+Configure DNS resolution for containers.
+
+### Container DNS Settings
+
+Containers use DNS for:
+- Resolving external domain names
+- Container-to-container communication by name
+- Service discovery
+
+<Note>
+  DNS configuration in Container Kit is currently under development. Advanced DNS features will be available in future releases.
+</Note>
+
+### Check DNS Configuration
+
+View current DNS settings:
+
+```typescript
+import { checkForDefaultDNS } from '$lib/services/containerization/setup';
+
+// Verify default DNS configuration
+checkForDefaultDNS();
+```
+
+### Custom DNS Servers (Coming Soon)
+
+In future releases, you'll be able to:
+1. Configure custom DNS servers
+2. Set DNS search domains
+3. Override default DNS resolution
+
+For now, containers use the system's DNS settings.
+
+## Network Security
+
+### Firewall Considerations
+
+macOS firewall may block container traffic:
+
+<Steps>
+  <Step title="Open System Settings">
+    Navigate to **System Settings** > **Network** > **Firewall**.
+  </Step>
+  
+  <Step title="Allow Container Kit">
+    Ensure Container Kit is allowed to accept incoming connections.
+  </Step>
+  
+  <Step title="Configure Port Rules">
+    Add rules for specific ports if needed:
+    - Allow the host ports you're mapping
+    - Block ports that shouldn't be externally accessible
+  </Step>
+</Steps>
+
+### Container Isolation
+
+Best practices for network security:
+
+<AccordionGroup>
+  <Accordion title="Use localhost binding">
+    Bind ports to localhost only when external access isn't needed:
+    
+    ```
+    127.0.0.1:8080:80
+    ```
+    
+    This prevents external network access while allowing local connections.
+  </Accordion>
+  
+  <Accordion title="Minimize exposed ports">
+    Only expose ports that are absolutely necessary:
+    
+    ✅ Good: Map only the web server port (80/443)
+    
+    ❌ Bad: Map all ports indiscriminately
+    
+    Each exposed port is a potential security risk.
+  </Accordion>
+  
+  <Accordion title="Use non-standard ports">
+    Consider using non-standard ports for services:
+    
+    ```
+    8080:80   # HTTP on 8080 instead of 80
+    8443:443  # HTTPS on 8443 instead of 443
+    ```
+    
+    This reduces automated scanning and attacks targeting default ports.
+  </Accordion>
+</AccordionGroup>
+
+## Container-to-Container Communication
+
+Containers on the same network can communicate with each other.
+
+### By Container Name (Coming Soon)
+
+In future releases, containers will be able to resolve each other by name:
+
+```bash
+# From one container, connect to another
+curl http://webapp:8080
+mysql -h database -u user -p
+redis-cli -h cache
+```
+
+### By IP Address
+
+For now, use IP addresses for container-to-container communication:
+
+<Steps>
+  <Step title="Find Container IP">
+    Inspect a container to find its IP address:
+    
+    ```typescript
+    import { inspectContainer } from '$lib/services/containerization/containers';
+    
+    const result = await inspectContainer('container-id');
+    const details = JSON.parse(result.stdout);
+    const ipAddress = details.NetworkSettings.IPAddress;
+    ```
+  </Step>
+  
+  <Step title="Connect from Another Container">
+    Use the IP address to connect:
+    
+    ```bash
+    # Example: Connect to database at 192.168.65.2
+    mysql -h 192.168.65.2 -u user -p
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Container IP addresses may change when containers restart. Use container names when that feature becomes available.
+</Tip>
+
+## Network Troubleshooting
+
+### Test Container Connectivity
+
+Verify network connectivity from within a container:
+
+```bash
+# Ping external host
+container exec <container-id> ping -c 4 google.com
+
+# Test DNS resolution
+container exec <container-id> nslookup google.com
+
+# Check listening ports
+container exec <container-id> netstat -tuln
+
+# Test connection to another container
+container exec <container-id> curl http://other-container-ip:8080
+```
+
+### Common Network Issues
+
+<AccordionGroup>
+  <Accordion title="Can't access container from browser">
+    If you can't access a container's web service:
+    
+    1. Verify the container is running: Check status in Containers tab
+    2. Confirm port mapping is correct: Review container details
+    3. Test locally first: `curl http://localhost:8080`
+    4. Check container logs: Look for binding errors
+    5. Verify the application is listening: `netstat` inside container
+    6. Check firewall settings: System Settings > Network > Firewall
+    
+    Common causes:
+    - Port mapping missing or incorrect
+    - Application not listening on the right interface
+    - Firewall blocking the connection
+    - Port already in use by another service
+  </Accordion>
+  
+  <Accordion title="Port conflict errors">
+    If you get "port already in use" errors:
+    
+    1. Check what's using the port:
+       ```bash
+       lsof -i :8080
+       ```
+    2. Stop the conflicting service or use a different port
+    3. Update the port mapping in container configuration
+    4. Restart the container with the new port
+    
+    Each port can only be mapped to one container at a time.
+  </Accordion>
+  
+  <Accordion title="Containers can't reach internet">
+    If containers have no internet connectivity:
+    
+    1. Test from host: Verify your Mac has internet
+    2. Check DNS: `container exec <id> nslookup google.com`
+    3. Test ping: `container exec <id> ping 8.8.8.8`
+    4. Review network configuration: Container inspect
+    5. Restart containerization service: Settings > System
+    6. Check system DNS settings: System Settings > Network
+    
+    Internet access requires proper NAT and DNS configuration.
+  </Accordion>
+  
+  <Accordion title="Containers can't communicate">
+    If containers can't reach each other:
+    
+    1. Verify both containers are running
+    2. Get container IP addresses: Inspect each container
+    3. Test ping between containers:
+       ```bash
+       container exec <container1> ping <container2-ip>
+       ```
+    4. Check port binding: Service must bind to 0.0.0.0, not 127.0.0.1
+    5. Verify firewall rules: Not blocking container traffic
+    
+    Containers must be on the same network to communicate.
+  </Accordion>
+  
+  <Accordion title="DNS resolution fails">
+    If DNS isn't working in containers:
+    
+    1. Check system DNS: System Settings > Network > DNS
+    2. Test DNS from host: `nslookup google.com`
+    3. Inspect container DNS config: Review /etc/resolv.conf
+    4. Try using IP addresses directly: Bypass DNS
+    5. Restart DNS service: May require service restart
+    
+    DNS issues often indicate system-wide network problems.
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Networking (Coming Soon)
+
+Future releases will include:
+
+### Custom Networks
+
+- Create isolated networks
+- Configure IP ranges and subnets
+- Manage network drivers
+- Connect containers to multiple networks
+
+### Network Policies
+
+- Define firewall rules between containers
+- Restrict ingress/egress traffic
+- Implement microsegmentation
+- Create network security policies
+
+### Load Balancing
+
+- Distribute traffic across multiple containers
+- Health checks and failover
+- Round-robin and least-connections algorithms
+- Service discovery and registration
+
+### VPN Integration
+
+- Connect containers to VPN networks
+- Route traffic through VPN tunnels
+- Secure remote access
+- Site-to-site connectivity
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Document port mappings">
+    Keep a record of your port mappings:
+    
+    ```yaml
+    # docker-compose.yml style documentation
+    services:
+      web:
+        ports:
+          - "8080:80"   # HTTP
+          - "8443:443"  # HTTPS
+      
+      database:
+        ports:
+          - "3306:3306" # MySQL
+    ```
+    
+    This prevents conflicts and makes configuration clear.
+  </Accordion>
+  
+  <Accordion title="Use environment-specific ports">
+    Different port ranges for different environments:
+    
+    - Development: 8000-8999
+    - Staging: 9000-9999
+    - Production: Standard ports (80, 443)
+    
+    This prevents conflicts when running multiple environments.
+  </Accordion>
+  
+  <Accordion title="Test networking early">
+    Verify networking as soon as containers start:
+    
+    1. Test internet connectivity
+    2. Verify port mappings work
+    3. Check inter-container communication
+    4. Validate DNS resolution
+    
+    Catch networking issues before deploying applications.
+  </Accordion>
+  
+  <Accordion title="Monitor network usage">
+    Keep an eye on network performance:
+    
+    - Monitor bandwidth usage
+    - Track connection counts
+    - Watch for DNS failures
+    - Log network errors
+    
+    Network monitoring helps identify issues early.
+  </Accordion>
+</AccordionGroup>
+
+## Network Diagnostics
+
+### Diagnostic Commands
+
+Useful commands for network troubleshooting:
+
+```bash
+# View container network details
+container inspect <container-id> | grep -A 20 NetworkSettings
+
+# Test connectivity from host
+curl -v http://localhost:8080
+telnet localhost 8080
+nc -zv localhost 8080
+
+# Test from container
+container exec <id> ping google.com
+container exec <id> curl -v http://example.com
+container exec <id> dig google.com
+
+# Check listening ports on host
+lsof -i -P | grep LISTEN
+netstat -an | grep LISTEN
+
+# Monitor network traffic (requires tools)
+container exec <id> tcpdump -i any port 80
+```
+
+### Network Information
+
+Key information to check:
+- Container IP address
+- Gateway address
+- DNS servers
+- Port mappings
+- Network interfaces
+- Routing table
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Container Management" icon="box" href="/guides/container-management">
+    Learn container lifecycle management
+  </Card>
+  
+  <Card title="Image Management" icon="layer-group" href="/guides/image-management">
+    Manage container images
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/guides/troubleshooting">
+    Solve common issues
+  </Card>
+  
+  <Card title="Technical Reference" icon="code" href="/reference/frontend-services">
+    Explore the Container Kit API
+  </Card>
+</CardGroup>

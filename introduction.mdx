@@ -1,0 +1,138 @@
+---
+title: Introduction to Container Kit
+description: A modern desktop application for Apple container management on macOS 26.0+ built with Tauri, Svelte 5, and TypeScript
+---
+
+# Container Kit
+
+**A modern desktop application for Apple container management**
+
+Container Kit is a comprehensive desktop application designed specifically for Apple ecosystem container management. It provides a beautiful interface for managing macOS app containers, sandboxes, virtualization environments, and more, all while maintaining the highest standards of security and performance that developers expect.
+
+<Note>
+  **Under Heavy Development** - This project is actively being developed and may have breaking changes. Features and APIs may change significantly between releases.
+</Note>
+
+## Key Highlights
+
+<CardGroup cols={2}>
+  <Card title="Apple-First Design" icon="apple">
+    Built specifically for macOS 26.0+ with native Apple HIG compliance and Apple Silicon optimization
+  </Card>
+  
+  <Card title="Modern Architecture" icon="code">
+    Tauri + Svelte 5 + TypeScript developer experience with full type safety throughout the stack
+  </Card>
+  
+  <Card title="Security Focused" icon="shield">
+    Comprehensive sandbox and container security management with Rust's memory safety guarantees
+  </Card>
+  
+  <Card title="Beautiful Interface" icon="palette">
+    Multiple theming options with dark/light modes, smooth animations powered by Motion library
+  </Card>
+</CardGroup>
+
+## Core Features
+
+### Container Management
+
+Container Kit provides comprehensive container management capabilities using Apple's container CLI:
+
+- **App Sandbox Containers** - Manage sandboxed macOS application environments with Apple's container CLI
+- **System Containers** - Handle isolated service environments and system processes
+- **Virtualization Containers** - Full integration with Apple's virtualization framework
+- **Container Networking** - Advanced networking configuration for Apple virtualization
+- **DNS Management** - Container-specific DNS settings and resolution
+- **Registry Management** - Apple container configuration and policy management
+
+### Developer Experience
+
+<CardGroup cols={2}>
+  <Card title="ShadCN Interface" icon="window">
+    Follows ShadCN Interface Guidelines for familiar, consistent UI patterns
+  </Card>
+  
+  <Card title="Dark/Light Themes" icon="moon">
+    Automatic theme switching with system preferences and smooth transitions
+  </Card>
+  
+  <Card title="Smooth Animations" icon="wand-magic-sparkles">
+    Fluid interactions powered by Motion library for delightful user experience
+  </Card>
+  
+  <Card title="Data Visualization" icon="chart-line">
+    Beautiful charts and graphs with LayerChart for container metrics
+  </Card>
+</CardGroup>
+
+### Developer Tools
+
+Container Kit includes powerful developer tools for building and managing the application:
+
+- **TypeScript Scripts** - Comprehensive build and automation scripts
+- **Migration System** - Robust database schema management with version control using Drizzle ORM
+- **Build Pipeline** - Custom Tauri build system with Apple code signing support
+- **Type Safety** - Full TypeScript integration throughout the stack
+- **Terminal Integration** - Built-in terminal for advanced container commands
+
+## Technology Stack
+
+### Frontend
+
+- **Svelte 5** - Latest reactivity system with runes for modern development
+- **SvelteKit** - Full-stack framework with static site generation
+- **TailwindCSS 4.x** - Latest engine with custom themes and utilities
+- **TypeScript** - Strict typing throughout for better developer experience
+
+### Backend
+
+- **Tauri 2.x** - Rust-based desktop framework for native performance
+- **Rust** - Systems programming for security and performance
+- **LibSQL** - SQLite-compatible database for local storage
+- **Drizzle ORM** - Type-safe database operations
+
+### Build Tools
+
+- **pnpm** - Fast, disk space efficient package manager
+- **Vite** - Lightning-fast build tool and development server
+- **TypeScript Automation** - Custom build scripts for Tauri and migrations
+
+## System Requirements
+
+<Warning>
+  Container Kit requires **macOS 26.0 or later** and is **only compatible with Apple Silicon Macs** (M1/M2/M3/M4). Intel Macs are not supported.
+</Warning>
+
+- macOS 26.0+ (Required - older versions not supported)
+- Apple Silicon Mac (M1/M2/M3/M4 - Intel Macs not supported)
+- Xcode Command Line Tools
+
+## Getting Started
+
+Ready to get started with Container Kit? Follow our quick installation guide:
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Download and install Container Kit on macOS 26.0+
+  </Card>
+  
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with your first container
+  </Card>
+</CardGroup>
+
+## Community & Support
+
+<Info>
+  Container Kit is open source and welcomes contributions from the community. We rely on Apple's container CLI which is still in development and may have breaking changes.
+</Info>
+
+- **GitHub Repository** - [etherCorps/ContainerKit](https://github.com/etherCorps/ContainerKit)
+- **Issue Tracker** - [Report bugs and request features](https://github.com/etherCorps/container-kit/issues)
+- **Discussions** - [Join the conversation](https://github.com/etherCorps/ContainerKit/discussions)
+- **Email Support** - [shivam@ethercorps.io](mailto:shivam@ethercorps.io)
+
+## License
+
+Container Kit is released under the [MIT License](https://opensource.org/licenses/MIT), making it free for personal and commercial use.

@@ -1,0 +1,350 @@
+---
+title: DNS Management
+description: Configure DNS settings for containers and manage domain resolution
+---
+
+Container Kit provides DNS management capabilities for container networking, allowing you to configure custom DNS domains, manage nameservers, and control DNS resolution for your containerized applications.
+
+## Overview
+
+The DNS system integrates with Apple's container service to provide DNS configuration for container networking. Manage DNS domains, search paths, and nameservers for your containers.
+
+## DNS Operations
+
+### Create DNS Domain
+
+Create a new DNS configuration for containers:
+
+```typescript
+import { createDns } from '$lib/services/containerization/dns';
+
+const result = await createDns('example.local');
+
+if (!result.error) {
+  console.log('DNS domain created:', result.stdout);
+} else {
+  console.error('Failed to create DNS:', result.stderr);
+}
+```
+
+<Note>
+  DNS creation requires elevated privileges and will prompt for authentication.
+</Note>
+
+Executes with elevated permissions:
+```bash
+container s dns create example.local
+```
+
+### List DNS Configurations
+
+Retrieve all configured DNS domains:
+
+```typescript
+import { getAllDnsConfig } from '$lib/services/containerization/dns';
+
+const result = await getAllDnsConfig();
+
+if (!result.error) {
+  // Output is space-separated string: "domain1 domain2 domain3"
+  const domains = result.stdout.trim().split(' ').filter(d => d.length > 0);
+  console.log('Configured DNS domains:', domains);
+}
+```
+
+<Info>
+  The container CLI returns DNS domains as a space-separated string rather than JSON format.
+</Info>
+
+## Container DNS Configuration
+
+### DNS Settings Structure
+
+Each container has comprehensive DNS configuration:
+
+```typescript
+type ContainerDNS = {
+  searchDomains: string[];   // DNS search domains for hostname resolution
+  options: string[];         // DNS resolver options
+  domain: string;            // Primary container domain
+  nameservers: string[];     // DNS nameserver IP addresses
+};
+```
+
+### Inspect Container DNS
+
+View DNS configuration for a specific container:
+
+```typescript
+import { inspectContainer } from '$lib/services/containerization/containers';
+
+const result = await inspectContainer('container-id');
+
+if (!result.error) {
+  const config = JSON.parse(result.stdout);
+  const dns = config.configuration.dns;
+  
+  console.log('DNS Configuration:');
+  console.log('Domain:', dns.domain);
+  console.log('Nameservers:', dns.nameservers);
+  console.log('Search domains:', dns.searchDomains);
+  console.log('Options:', dns.options);
+}
+```
+
+## DNS Use Cases
+
+<Tabs>
+  <Tab title="Service Discovery">
+    Use DNS for container-to-container communication:
+
+    ```typescript
+    // Create DNS domain for service discovery
+    await createDns('services.local');
+    
+    // Containers can now resolve each other by hostname
+    // Example: web.services.local -> 172.16.0.5
+    
+    const result = await inspectContainer('web-container');
+    const dns = JSON.parse(result.stdout).configuration.dns;
+    
+    console.log('Service domain:', dns.domain);
+    console.log('Can resolve:', dns.searchDomains);
+    ```
+
+    Containers on the same network can discover each other using hostnames.
+  </Tab>
+
+  <Tab title="Custom Nameservers">
+    Configure custom DNS servers for containers:
+
+    ```typescript
+    const result = await inspectContainer('container-id');
+    const dns = JSON.parse(result.stdout).configuration.dns;
+    
+    // View configured nameservers
+    console.log('DNS Servers:', dns.nameservers);
+    // Example: ["8.8.8.8", "8.8.4.4"] or internal DNS
+    ```
+
+    Custom nameservers enable:
+    - Internal DNS resolution
+    - Corporate DNS policies
+    - DNS-based filtering
+    - Performance optimization
+  </Tab>
+
+  <Tab title="Search Domains">
+    Use search domains for simplified hostname resolution:
+
+    ```typescript
+    const result = await inspectContainer('container-id');
+    const dns = JSON.parse(result.stdout).configuration.dns;
+    
+    console.log('Search domains:', dns.searchDomains);
+    // Example: ["local", "company.internal"]
+    
+    // With search domains, you can use:
+    // - "web" instead of "web.company.internal"
+    // - "db" instead of "db.local"
+    ```
+
+    Search domains simplify service names and enable hierarchical DNS.
+  </Tab>
+</Tabs>
+
+## DNS and Networking
+
+### Network-Level DNS
+
+DNS configuration works with network attachments:
+
+```typescript
+import { inspectContainer } from '$lib/services/containerization/containers';
+
+const result = await inspectContainer('container-id');
+const container = JSON.parse(result.stdout);
+
+// DNS configuration
+const dns = container.configuration.dns;
+console.log('DNS domain:', dns.domain);
+
+// Network attachments with hostnames
+container.networks.forEach(net => {
+  console.log(`Network: ${net.network}`);
+  console.log(`Hostname: ${net.hostname}`);
+  console.log(`IP: ${net.ipv4Address}`);
+});
+```
+
+### Hostname Resolution
+
+Containers resolve hostnames using:
+
+1. **Container hostname** - Primary hostname from configuration
+2. **Network hostname** - Per-network hostname from attachments
+3. **Search domains** - Automatic domain suffix appending
+4. **Nameservers** - DNS servers for resolution
+
+```typescript
+const result = await inspectContainer('web-container');
+const config = JSON.parse(result.stdout);
+
+// Primary hostname
+console.log('Hostname:', config.configuration.hostname);
+
+// Network-specific hostnames
+config.networks.forEach(net => {
+  console.log(`${net.network} hostname:`, net.hostname);
+});
+
+// DNS settings for resolution
+const dns = config.configuration.dns;
+console.log('Resolves via:', dns.nameservers);
+console.log('Search paths:', dns.searchDomains);
+```
+
+## DNS Management Workflows
+
+### Setup DNS for Application
+
+```typescript
+import { createDns, getAllDnsConfig } from '$lib/services/containerization/dns';
+
+// 1. Check existing DNS configurations
+const existing = await getAllDnsConfig();
+const domains = existing.stdout.trim().split(' ');
+
+console.log('Existing domains:', domains);
+
+// 2. Create application DNS domain
+if (!domains.includes('myapp.local')) {
+  const result = await createDns('myapp.local');
+  
+  if (result.error) {
+    console.error('Failed to create DNS domain');
+  } else {
+    console.log('DNS domain created successfully');
+  }
+}
+
+// 3. Verify creation
+const updated = await getAllDnsConfig();
+const newDomains = updated.stdout.trim().split(' ');
+console.log('Updated domains:', newDomains);
+```
+
+### DNS Troubleshooting
+
+```typescript
+import { inspectContainer } from '$lib/services/containerization/containers';
+import { getAllDnsConfig } from '$lib/services/containerization/dns';
+
+// Check system DNS configuration
+const systemDns = await getAllDnsConfig();
+console.log('System DNS domains:', systemDns.stdout);
+
+// Check container DNS settings
+const container = await inspectContainer('container-id');
+if (!container.error) {
+  const dns = JSON.parse(container.stdout).configuration.dns;
+  
+  console.log('\nContainer DNS Configuration:');
+  console.log('Domain:', dns.domain);
+  console.log('Nameservers:', dns.nameservers);
+  
+  if (dns.nameservers.length === 0) {
+    console.warn('⚠️  No nameservers configured!');
+  }
+  
+  if (dns.searchDomains.length === 0) {
+    console.warn('⚠️  No search domains configured!');
+  }
+}
+```
+
+## DNS Resolver Options
+
+Containers can have custom DNS resolver options:
+
+```typescript
+const result = await inspectContainer('container-id');
+const dns = JSON.parse(result.stdout).configuration.dns;
+
+console.log('DNS Options:', dns.options);
+// Common options:
+// - "ndots:5" - number of dots in name before absolute query
+// - "timeout:2" - resolver timeout in seconds
+// - "attempts:3" - number of query attempts
+```
+
+## Best Practices
+
+### Domain Naming
+
+- Use `.local` suffix for local development domains
+- Use `.internal` for internal service domains
+- Avoid conflicts with real internet domains
+- Use descriptive, hierarchical names
+- Document DNS domain purposes
+
+### Configuration
+
+- Set up DNS domains before creating containers
+- Use consistent search domains across related containers
+- Configure appropriate nameservers for your environment
+- Test DNS resolution after configuration changes
+
+### Service Discovery
+
+- Use DNS for dynamic service discovery
+- Prefer DNS names over IP addresses
+- Implement health checks with DNS
+- Document service DNS names
+
+### Security
+
+- Isolate DNS domains by environment (dev/staging/prod)
+- Use internal DNS servers for sensitive services
+- Monitor DNS query patterns
+- Implement DNS-based access controls
+
+## Multi-Container DNS
+
+Managing DNS for multiple containers:
+
+```typescript
+import { getAllContainers, inspectContainer } from '$lib/services/containerization/containers';
+import { getAllDnsConfig } from '$lib/services/containerization/dns';
+
+// Get all containers
+const containersResult = await getAllContainers();
+const containers = JSON.parse(containersResult.stdout);
+
+// Create DNS map
+const dnsMap = new Map();
+
+for (const container of containers) {
+  const details = await inspectContainer(container.id);
+  if (!details.error) {
+    const config = JSON.parse(details.stdout);
+    dnsMap.set(container.id, {
+      hostname: config.configuration.hostname,
+      domain: config.configuration.dns.domain,
+      nameservers: config.configuration.dns.nameservers
+    });
+  }
+}
+
+// Display DNS topology
+console.log('DNS Configuration Map:');
+dnsMap.forEach((dns, id) => {
+  console.log(`${id}: ${dns.hostname}.${dns.domain}`);
+});
+```
+
+## Related Features
+
+- [Networks](/features/networks) - Network configuration and attachments
+- [Containers](/features/containers) - Container management
+- [Registry](/features/registry) - Registry DNS resolution

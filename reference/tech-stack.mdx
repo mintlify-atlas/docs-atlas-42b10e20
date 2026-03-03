@@ -1,0 +1,323 @@
+---
+title: Technology Stack
+description: Complete overview of Container Kit's technology stack and dependencies
+---
+
+Container Kit is built using modern cross-platform technologies, combining Tauri for native desktop capabilities with Svelte for the frontend interface.
+
+## Core Framework
+
+### Tauri v2
+
+Container Kit uses Tauri v2 as its desktop application framework, providing:
+
+- Native desktop integration
+- Secure IPC (Inter-Process Communication)
+- Plugin system for extended functionality
+- Small binary size and low memory footprint
+- Cross-platform support (macOS, Linux, Windows)
+
+**Version:** 2.x
+
+### Svelte 5
+
+The frontend is built with Svelte 5, offering:
+
+- Reactive UI components
+- Compile-time optimization
+- Minimal runtime overhead
+- Modern component architecture
+
+**Version:** 5.51.3
+
+## Backend (Rust)
+
+### Core Dependencies
+
+<ParamField path="tauri" type="2.x">
+  Core Tauri framework with devtools, tray-icon, and image support
+</ParamField>
+
+<ParamField path="tokio" type="1.45.1">
+  Asynchronous runtime for Rust with full features enabled
+</ParamField>
+
+<ParamField path="serde" type="1.x">
+  Serialization/deserialization framework with derive macros
+</ParamField>
+
+<ParamField path="serde_json" type="1.x">
+  JSON serialization support
+</ParamField>
+
+### Tauri Plugins (Rust)
+
+<ParamField path="tauri-plugin-shell" type="2.x">
+  Execute shell commands and manage processes
+</ParamField>
+
+<ParamField path="tauri-plugin-sql" type="2.x">
+  SQLite database integration
+</ParamField>
+
+<ParamField path="tauri-plugin-store" type="2.x">
+  Persistent key-value storage
+</ParamField>
+
+<ParamField path="tauri-plugin-fs" type="2.x">
+  File system operations with watch capabilities
+</ParamField>
+
+<ParamField path="tauri-plugin-dialog" type="2.x">
+  Native file/folder dialogs
+</ParamField>
+
+<ParamField path="tauri-plugin-clipboard-manager" type="2.x">
+  Clipboard read/write operations
+</ParamField>
+
+<ParamField path="tauri-plugin-updater" type="2.x">
+  Application auto-update functionality
+</ParamField>
+
+<ParamField path="tauri-plugin-window-state" type="2.x">
+  Persist and restore window state
+</ParamField>
+
+<ParamField path="tauri-plugin-pty" type="0.1.0">
+  Pseudo-terminal support for integrated terminals
+</ParamField>
+
+<ParamField path="tauri-plugin-os" type="2.x">
+  Operating system information
+</ParamField>
+
+<ParamField path="tauri-plugin-opener" type="2.x">
+  Open files and URLs with default applications
+</ParamField>
+
+### Type Safety & Code Generation
+
+<ParamField path="specta" type="2.0.0-rc.22">
+  Type specification library for generating TypeScript types from Rust
+</ParamField>
+
+<ParamField path="tauri-specta" type="2.0.0-rc.21">
+  Tauri integration for Specta with TypeScript generation
+</ParamField>
+
+<ParamField path="specta-typescript" type="0.0.9">
+  TypeScript code generation from Specta types
+</ParamField>
+
+### System Integration
+
+<ParamField path="elevated-command" type="1.1.2">
+  Execute commands with elevated privileges (sudo)
+</ParamField>
+
+<ParamField path="fix-path-env" type="git">
+  Fix PATH environment variable on macOS
+</ParamField>
+
+## Frontend (TypeScript/JavaScript)
+
+### Framework & Build Tools
+
+<ParamField path="@sveltejs/kit" type="2.52.0">
+  Application framework for Svelte
+</ParamField>
+
+<ParamField path="vite" type="6.4.1">
+  Frontend build tool and dev server
+</ParamField>
+
+<ParamField path="typescript" type="5.6.3">
+  TypeScript compiler for type-safe JavaScript
+</ParamField>
+
+<ParamField path="@sveltejs/adapter-static" type="3.0.8">
+  Static site adapter for SvelteKit
+</ParamField>
+
+### Tauri Client Libraries
+
+<ParamField path="@tauri-apps/api" type="2.9.1">
+  Core Tauri JavaScript API
+</ParamField>
+
+<ParamField path="@tauri-apps/plugin-*" type="2.x">
+  Frontend counterparts for Tauri plugins (shell, fs, dialog, sql, store, clipboard-manager, updater, window-state, os, opener)
+</ParamField>
+
+### Database
+
+<ParamField path="@libsql/client" type="0.15.10">
+  LibSQL client for local database operations
+</ParamField>
+
+<ParamField path="drizzle-orm" type="0.44.3">
+  Type-safe ORM for database queries
+</ParamField>
+
+<ParamField path="drizzle-kit" type="0.31.4">
+  Database migration toolkit
+</ParamField>
+
+### Terminal & PTY
+
+<ParamField path="@xterm/xterm" type="5.5.0">
+  Terminal emulator for web browsers
+</ParamField>
+
+<ParamField path="@battlefieldduck/xterm-svelte" type="2.1.0">
+  Svelte wrapper for xterm.js
+</ParamField>
+
+<ParamField path="tauri-pty" type="0.1.0">
+  Pseudo-terminal support
+</ParamField>
+
+### UI Components & Libraries
+
+<ParamField path="bits-ui" type="2.14.4">
+  Headless UI component library for Svelte
+</ParamField>
+
+<ParamField path="@dnd-kit-svelte" type="0.0.8">
+  Drag and drop toolkit for Svelte (core, sortable, modifiers, utilities)
+</ParamField>
+
+<ParamField path="paneforge" type="1.0.2">
+  Resizable pane components
+</ParamField>
+
+<ParamField path="vaul-svelte" type="1.0.0-next.7">
+  Drawer/sheet component
+</ParamField>
+
+<ParamField path="layerchart" type="2.0.0-next.14">
+  Data visualization and charting library
+</ParamField>
+
+<ParamField path="svelte-sonner" type="1.0.5">
+  Toast notification system
+</ParamField>
+
+### Styling
+
+<ParamField path="tailwindcss" type="4.1.17">
+  Utility-first CSS framework
+</ParamField>
+
+<ParamField path="@tailwindcss/forms" type="0.5.10">
+  Form styling plugin for Tailwind
+</ParamField>
+
+<ParamField path="@tailwindcss/typography" type="0.5.16">
+  Typography plugin for Tailwind
+</ParamField>
+
+<ParamField path="tailwind-variants" type="3.2.2">
+  Variant composition for Tailwind classes
+</ParamField>
+
+<ParamField path="tailwind-merge" type="3.4.0">
+  Merge Tailwind CSS classes without style conflicts
+</ParamField>
+
+<ParamField path="tw-animate-css" type="1.4.0">
+  Animation utilities for Tailwind
+</ParamField>
+
+### Icons & Visuals
+
+<ParamField path="@lucide/svelte" type="0.561.0">
+  Icon library for Svelte
+</ParamField>
+
+<ParamField path="tauri-liquid-icon" type="1.1.0">
+  Liquid-style icons for Tauri
+</ParamField>
+
+### Data Visualization
+
+<ParamField path="d3-scale" type="4.0.2">
+  D3 scale functions for data visualization
+</ParamField>
+
+<ParamField path="d3-shape" type="3.2.0">
+  D3 shape generators
+</ParamField>
+
+### Utilities
+
+<ParamField path="uuid" type="11.1.0">
+  UUID generation library
+</ParamField>
+
+<ParamField path="pretty-bytes" type="7.1.0">
+  Format bytes to human-readable strings
+</ParamField>
+
+<ParamField path="devalue" type="5.6.2">
+  Serialize JavaScript values
+</ParamField>
+
+<ParamField path="clsx" type="2.1.1">
+  Conditional class name utility
+</ParamField>
+
+<ParamField path="mode-watcher" type="1.1.0">
+  Dark/light mode management
+</ParamField>
+
+<ParamField path="runed" type="0.36.0">
+  Svelte utilities and helpers
+</ParamField>
+
+<ParamField path="@internationalized/date" type="3.10.0">
+  Internationalized date handling
+</ParamField>
+
+### Code Highlighting
+
+<ParamField path="shiki" type="3.17.0">
+  Syntax highlighter
+</ParamField>
+
+<ParamField path="@shikijs/langs" type="3.17.0">
+  Language definitions for Shiki
+</ParamField>
+
+<ParamField path="@shikijs/themes" type="3.17.0">
+  Themes for Shiki
+</ParamField>
+
+### Data Tables
+
+<ParamField path="@tanstack/table-core" type="8.21.3">
+  Headless table utilities
+</ParamField>
+
+## Development Tools
+
+<ParamField path="@tauri-apps/cli" type="2.6.1">
+  Tauri command-line interface
+</ParamField>
+
+<ParamField path="prettier" type="3.6.2">
+  Code formatter
+</ParamField>
+
+<ParamField path="svelte-check" type="4.4.0">
+  Type checking for Svelte components
+</ParamField>
+
+<ParamField path="tsx" type="4.20.6">
+  TypeScript execution for scripts
+</ParamField>
+
+## Package Manager
+
+Container Kit uses **pnpm 10.12.1** as its package manager for efficient dependency management and workspace support.

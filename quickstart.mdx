@@ -1,80 +1,394 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get up and running with Container Kit - from installation to your first container
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through getting started with Container Kit, from installation to managing your first container. You'll learn the basics of the interface and essential container operations.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This guide assumes you have already installed Container Kit. If not, see the [Installation Guide](/installation) first.
+</Note>
+
+## Launch Container Kit
+
+Start Container Kit using one of these methods:
+
+```bash
+# From Spotlight
+# Press Cmd + Space, type "Container Kit", and press Enter
+
+# From Terminal
+open -a "Container Kit"
+
+# From Applications folder
+# Navigate to Applications → Container Kit
+```
+
+## Understanding the Interface
+
+Container Kit features a modern, intuitive interface designed following Apple's Human Interface Guidelines:
+
+### Main Dashboard
+
+The dashboard provides an overview of your container ecosystem:
+
+- **Container List** - All your containers with status indicators
+- **Resource Usage** - CPU, memory, and storage metrics with LayerChart visualizations
+- **Quick Actions** - Start, stop, restart, and delete containers
+- **Search & Filter** - Find containers by name, status, or type
+
+### Navigation
+
+- **Containers** - View and manage all containers
+- **Terminal** - Integrated terminal for advanced container commands
+- **Settings** - Configure Container Kit preferences and themes
+
+### Theme Options
+
+Container Kit supports multiple themes that automatically sync with your system:
+
+- **Light Mode** - Clean, bright interface for daytime use
+- **Dark Mode** - Easy on the eyes for night work
+- **System** - Automatically matches your macOS appearance settings
+
+Switch themes in **Settings** → **Appearance** → **Theme**
+
+## Managing Your First Container
+
+Let's walk through the essential container operations using Container Kit.
+
+### Viewing Containers
+
+<Steps>
+  <Step title="Open the Containers view">
+    Click on **Containers** in the sidebar to see all containers on your system.
+    
+    The container list shows:
+    - Container name and ID
+    - Current status (Running, Stopped, Paused)
+    - Resource usage (CPU, Memory)
+    - Last modified timestamp
+  </Step>
+  
+  <Step title="Filter containers by type">
+    Use the filter dropdown to view specific container types:
+    
+    - **App Sandbox Containers** - Sandboxed macOS applications
+    - **System Containers** - System services and processes
+    - **Virtualization Containers** - Apple virtualization environments
+  </Step>
+  
+  <Step title="Search for a container">
+    Use the search bar at the top to find containers by:
+    
+    - Container name
+    - Container ID
+    - Application bundle ID
+    
+    ```
+    # Example search queries:
+    com.apple.Safari
+    container-abc123
+    MyApp
+    ```
+  </Step>
+</Steps>
+
+### Container Operations
+
+<Steps>
+  <Step title="View container details">
+    Click on any container to view detailed information:
+    
+    - **Overview** - Status, ID, creation date
+    - **Resources** - CPU, memory, disk usage with real-time charts
+    - **Networking** - Network configuration and DNS settings
+    - **Registry** - Container registry and policy information
+    
+    <Info>
+      Container Kit uses the Apple Container CLI under the hood for all operations, ensuring native compatibility and performance.
+    </Info>
+  </Step>
+  
+  <Step title="Start a container">
+    To start a stopped container:
+    
+    1. Select the container from the list
+    2. Click the **Start** button in the action bar
+    3. Wait for the status to change to "Running"
+    
+    You can also start containers from the terminal:
+    
+    ```bash
+    # Container Kit uses the bundled Apple Container CLI
+    # Access it through the integrated terminal
+    container start <container-id>
+    ```
+  </Step>
+  
+  <Step title="Stop a container">
+    To stop a running container:
+    
+    1. Select the container from the list
+    2. Click the **Stop** button in the action bar
+    3. Confirm the action if prompted
+    
+    <Warning>
+      Stopping a container will terminate all running processes inside it. Ensure you've saved any work before stopping.
+    </Warning>
+  </Step>
+  
+  <Step title="Delete a container">
+    To permanently remove a container:
+    
+    1. Select the container from the list
+    2. Click the **Delete** button (trash icon)
+    3. Confirm the deletion in the dialog
+    
+    <Warning>
+      Deleting a container is permanent and will remove all associated data. This action cannot be undone.
+    </Warning>
+  </Step>
+</Steps>
+
+## Using the Integrated Terminal
+
+Container Kit includes a powerful terminal integration using xterm for advanced container operations.
+
+<Steps>
+  <Step title="Open the terminal">
+    Click **Terminal** in the sidebar to open the integrated terminal.
+    
+    The terminal provides:
+    - Full bash shell access
+    - Access to the bundled Apple Container CLI
+    - Syntax highlighting and autocomplete
+    - Multiple terminal tabs
+  </Step>
+  
+  <Step title="Run container commands">
+    Use the Apple Container CLI directly:
+    
+    ```bash
+    # List all containers
+    container list
+    
+    # Get container info
+    container info <container-id>
+    
+    # View container logs
+    container logs <container-id>
+    
+    # Inspect container configuration
+    container inspect <container-id>
+    ```
+  </Step>
+  
+  <Step title="Manage container networking">
+    Configure container networking settings:
+    
+    ```bash
+    # View network configuration
+    container network list
+    
+    # Configure DNS for a container
+    container network dns <container-id> --add 8.8.8.8
+    
+    # View network interfaces
+    container network inspect <container-id>
+    ```
+  </Step>
+</Steps>
+
+## Container Monitoring
+
+Container Kit provides real-time monitoring and visualization of container resources.
+
+### Resource Metrics
+
+The dashboard displays live metrics using LayerChart:
+
+- **CPU Usage** - Per-container CPU utilization with historical trends
+- **Memory Usage** - RAM consumption and allocation
+- **Disk I/O** - Read/write operations and throughput
+- **Network Traffic** - Inbound and outbound data transfer
+
+### Setting Alerts
+
+<Info>
+  Alert functionality is under active development. Resource thresholds and notifications will be available in a future release.
+</Info>
+
+## Database and Storage
+
+Container Kit uses LibSQL (SQLite-compatible) for local data storage and Drizzle ORM for type-safe database operations.
+
+### Data Persistence
+
+Container Kit stores:
+- Container metadata and status
+- User preferences and settings
+- Historical resource usage data
+- Terminal history and favorites
+
+Database location: `~/Library/Application Support/com.ethercorps.container-kit/container-kit.db`
+
+### Database Migrations
+
+Container Kit automatically applies database migrations on startup. If you're building from source:
+
+```bash
+# Generate new migrations from schema changes
+pnpm db:generate
+
+# This will:
+# 1. Run drizzle-kit generate to create SQL migrations
+# 2. Run generate-migrations.ts to create Rust bindings
+# 3. Update migration files in src-tauri/migrations/
+```
+
+## Configuration and Settings
+
+Customize Container Kit to match your workflow.
+
+<Steps>
+  <Step title="Open Settings">
+    Click the gear icon in the sidebar or press `Cmd + ,` to open Settings.
+  </Step>
+  
+  <Step title="Configure appearance">
+    Navigate to **Appearance** to customize:
+    
+    - **Theme** - Light, Dark, or System
+    - **Accent Color** - Choose your preferred accent color
+    - **Animations** - Enable/disable Motion-powered animations
+    - **Font Size** - Adjust terminal and UI font sizes
+  </Step>
+  
+  <Step title="Set container defaults">
+    Navigate to **Containers** to configure:
+    
+    - **Default Storage Location** - Where container data is stored
+    - **Auto-start Containers** - Containers to start on app launch
+    - **Resource Limits** - Default CPU and memory limits
+  </Step>
+  
+  <Step title="Configure terminal">
+    Navigate to **Terminal** to customize:
+    
+    - **Shell** - Default shell (bash, zsh, etc.)
+    - **Color Scheme** - Terminal color themes
+    - **Font** - Monospace font for terminal
+    - **Scrollback** - Terminal history buffer size
+  </Step>
+</Steps>
+
+## Keyboard Shortcuts
+
+Boost your productivity with keyboard shortcuts:
+
+| Action | Shortcut |
+|--------|----------|
+| Open Settings | `Cmd + ,` |
+| New Terminal Tab | `Cmd + T` |
+| Close Tab | `Cmd + W` |
+| Search Containers | `Cmd + F` |
+| Refresh Container List | `Cmd + R` |
+| Toggle Sidebar | `Cmd + B` |
+
+## Development Mode
+
+If you're developing with Container Kit, you can run it in development mode with hot reload:
+
+```bash
+cd ContainerKit
+pnpm tauri dev
+```
+
+This will:
+- Start the Vite dev server on `http://localhost:1420`
+- Launch the Tauri app with hot module replacement
+- Enable debug logging and development tools
+- Watch for file changes and automatically rebuild
+
+<Info>
+  Development mode requires the full source code. See the [Installation Guide](/installation#option-2-build-from-source-recommended-for-developers) for setup instructions.
+</Info>
+
+## Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Containers not showing up">
+    If containers aren't appearing in the list:
+    
+    1. **Refresh the list** - Press `Cmd + R` or click the refresh button
+    2. **Check permissions** - Ensure Container Kit has Full Disk Access in System Settings
+    3. **Restart the app** - Quit and relaunch Container Kit
+    4. **Check terminal** - Run `container list` in the integrated terminal to verify the CLI is working
+  </Accordion>
+  
+  <Accordion title="Terminal not working">
+    If the integrated terminal isn't responding:
+    
+    1. **Check shell path** - Verify your shell is correctly configured in Settings
+    2. **Restart terminal** - Close and reopen the Terminal tab
+    3. **Check permissions** - Ensure Automation permissions are granted
+    4. **View logs** - Check Console.app for Container Kit errors
+  </Accordion>
+  
+  <Accordion title="High CPU or memory usage">
+    If Container Kit is consuming too many resources:
+    
+    1. **Close unused terminals** - Each terminal tab uses resources
+    2. **Reduce refresh rate** - Adjust polling interval in Settings
+    3. **Disable animations** - Turn off Motion animations in Settings
+    4. **Restart the app** - Quit and relaunch to clear memory
+  </Accordion>
+  
+  <Accordion title="Database errors on startup">
+    If you see database migration errors:
+    
+    1. **Backup your data** - Copy `~/Library/Application Support/com.ethercorps.container-kit/`
+    2. **Reset database** - Delete `container-kit.db` and restart (data will be lost)
+    3. **Check migrations** - Ensure all migrations in `src-tauri/migrations/` are present
+    4. **Report issue** - Create an issue on [GitHub](https://github.com/etherCorps/container-kit/issues) with error logs
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you're familiar with the basics, explore more advanced features:
+
+<CardGroup cols={2}>
+  <Card title="Contributing Guide" icon="code-pull-request" href="https://github.com/etherCorps/ContainerKit/blob/main/CONTRIBUTING.md">
+    Learn how to contribute to Container Kit development
+  </Card>
+  
+  <Card title="GitHub Repository" icon="github" href="https://github.com/etherCorps/ContainerKit">
+    View source code, report issues, and join discussions
+  </Card>
+  
+  <Card title="Apple Container CLI" icon="terminal" href="https://github.com/apple/container">
+    Learn more about Apple's official container CLI
+  </Card>
+  
+  <Card title="Report Issues" icon="bug" href="https://github.com/etherCorps/container-kit/issues">
+    Found a bug? Let us know on GitHub Issues
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you need assistance:
+
+- **GitHub Discussions** - [Ask questions and share ideas](https://github.com/etherCorps/ContainerKit/discussions)
+- **GitHub Issues** - [Report bugs and request features](https://github.com/etherCorps/container-kit/issues)
+- **Email Support** - [shivam@ethercorps.io](mailto:shivam@ethercorps.io)
+
+<Note>
+  Container Kit is under heavy development. Features and APIs may change between releases. Check the repository regularly for updates.
 </Note>

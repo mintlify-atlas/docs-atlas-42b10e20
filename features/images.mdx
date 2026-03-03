@@ -1,0 +1,295 @@
+---
+title: Image Management
+description: Pull, inspect, export, and manage container images with Container Kit's image operations
+---
+
+Container Kit provides comprehensive image management for macOS containers, allowing you to pull images from registries, inspect image details, export to tar archives, and manage your local image library.
+
+## Overview
+
+The image management system integrates with Apple's container CLI to handle container images efficiently. All operations support the native macOS architecture (ARM64/aarch64).
+
+## Core Functions
+
+### Listing Images
+
+Retrieve all images stored locally:
+
+```typescript
+import { getAllImages } from '$lib/services/containerization/images';
+
+const result = await getAllImages();
+
+if (!result.error) {
+  const images = JSON.parse(result.stdout);
+  console.log('Available images:', images);
+}
+```
+
+Executes:
+```bash
+container image ls --format json
+```
+
+### Pulling Images
+
+Download images from a registry:
+
+```typescript
+import { pullImage } from '$lib/services/containerization/images';
+
+// Pull the latest version
+const result = await pullImage(['redis']);
+
+// Pull specific version
+const result = await pullImage(['redis:7.2']);
+
+// Pull from specific registry
+const result = await pullImage(['docker.io/library/nginx:alpine']);
+
+if (!result.error) {
+  console.log('Image pulled successfully:', result.stdout);
+}
+```
+
+## Image Operations
+
+<Tabs>
+  <Tab title="Inspect">
+    Get detailed information about an image:
+
+    ```typescript
+    import { inspectImage } from '$lib/services/containerization/images';
+
+    const result = await inspectImage('redis:latest');
+    
+    if (!result.error) {
+      const imageData = JSON.parse(result.stdout);
+      console.log('Image details:', imageData);
+    }
+    ```
+
+    Returns:
+    - Image digest and size
+    - Media type
+    - Full image reference
+    - Layer information
+  </Tab>
+
+  <Tab title="Remove">
+    Delete one or multiple images:
+
+    ```typescript
+    import { removeImage, removeMultipleImages } from '$lib/services/containerization/images';
+
+    // Remove single image
+    const result = await removeImage('nginx:alpine');
+
+    // Remove multiple images
+    const result = await removeMultipleImages([
+      'redis:latest',
+      'nginx:alpine',
+      'postgres:15'
+    ]);
+    
+    if (!result.error) {
+      console.log('Images removed successfully');
+    }
+    ```
+
+    <Note>
+      Ensure no containers are using the image before removal.
+    </Note>
+  </Tab>
+
+  <Tab title="Export">
+    Export an image to a tar archive:
+
+    ```typescript
+    import { exportImageToTar } from '$lib/services/containerization/images';
+
+    // Basic export
+    const result = await exportImageToTar(
+      'redis',
+      '/path/to/redis-image.tar'
+    );
+
+    // Export with architecture specification
+    const result = await exportImageToTar(
+      'redis',
+      '/path/to/redis-arm64.tar',
+      ['--arch', 'aarch64']
+    );
+    
+    if (!result.error) {
+      console.log('Image exported to tar archive');
+    }
+    ```
+
+    Executes:
+    ```bash
+    container image save --arch aarch64 --output /path/to/image.tar redis
+    ```
+  </Tab>
+
+  <Tab title="Import">
+    Load an image from a tar archive:
+
+    ```typescript
+    import { importImageFromTar } from '$lib/services/containerization/images';
+
+    const result = await importImageFromTar('/path/to/image.tar');
+    
+    if (!result.error) {
+      console.log('Image imported successfully');
+    }
+    ```
+
+    Executes:
+    ```bash
+    container image load -i /path/to/image.tar
+    ```
+  </Tab>
+</Tabs>
+
+## Image Data Structure
+
+Images in Container Kit follow this type structure:
+
+```typescript
+type ContainerImage = {
+  descriptor: {
+    digest: string;      // SHA256 digest
+    size: number;        // Size in bytes
+    mediaType: string;   // Image media type
+  };
+  reference: string;     // Full image reference
+  fullSize: string;      // Human-readable size
+};
+```
+
+Example image data:
+```json
+{
+  "descriptor": {
+    "digest": "sha256:abc123...",
+    "size": 116736000,
+    "mediaType": "application/vnd.oci.image.manifest.v1+json"
+  },
+  "reference": "docker.io/library/redis:latest",
+  "fullSize": "111.3 MB"
+}
+```
+
+## Advanced Usage
+
+### Creating Pull Commands
+
+For progress tracking or custom implementations:
+
+```typescript
+import { createPullImageCommand } from '$lib/services/containerization/images';
+
+const command = createPullImageCommand(['nginx:alpine']);
+// Use command for custom execution with progress callbacks
+```
+
+### Batch Image Operations
+
+Manage multiple images efficiently:
+
+```typescript
+import { getAllImages, removeMultipleImages } from '$lib/services/containerization/images';
+
+// Get all images
+const imagesResult = await getAllImages();
+
+if (!imagesResult.error) {
+  const images = JSON.parse(imagesResult.stdout);
+  
+  // Find unused images (example logic)
+  const unusedImages = images
+    .filter(img => /* your filter logic */)
+    .map(img => img.reference);
+  
+  // Remove unused images
+  if (unusedImages.length > 0) {
+    await removeMultipleImages(unusedImages);
+  }
+}
+```
+
+## Architecture Support
+
+Container Kit runs on Apple Silicon Macs and supports ARM64 architecture:
+
+<CodeGroup>
+```typescript Export for Apple Silicon
+const result = await exportImageToTar(
+  'redis',
+  '/path/to/redis.tar',
+  ['--arch', 'aarch64']
+);
+```
+
+```typescript Pull Multi-Arch Image
+// Container CLI automatically selects ARM64 variant
+const result = await pullImage(['postgres:15']);
+```
+</CodeGroup>
+
+<Info>
+  Container Kit is optimized for Apple Silicon (M1/M2/M3/M4) and requires macOS 26.0+. Multi-architecture images will automatically use the ARM64 variant.
+</Info>
+
+## Image Registries
+
+Pull images from various registries:
+
+```typescript
+// Docker Hub (default)
+await pullImage(['redis']);
+await pullImage(['library/nginx']);
+
+// Explicit Docker Hub
+await pullImage(['docker.io/library/postgres:15']);
+
+// Other registries
+await pullImage(['ghcr.io/organization/image:tag']);
+await pullImage(['quay.io/organization/image:latest']);
+```
+
+## Error Handling
+
+Handle image operation errors properly:
+
+```typescript
+const result = await pullImage(['nginx:alpine']);
+
+if (result.error) {
+  console.error('Pull failed:', result.stderr);
+  
+  // Common errors:
+  // - Network issues
+  // - Authentication required
+  // - Image not found
+  // - Insufficient disk space
+} else {
+  console.log('Success:', result.stdout);
+}
+```
+
+## Best Practices
+
+- Use specific image tags instead of `latest` for production
+- Regularly clean up unused images to save disk space
+- Export critical images as backup tar archives
+- Verify image digests for security
+- Use ARM64-compatible images for best performance
+- Keep local image cache manageable
+
+## Related Features
+
+- [Containers](/features/containers) - Create containers from images
+- [Registry](/features/registry) - Configure registry authentication
+- [Terminal](/features/terminal) - Run image commands directly

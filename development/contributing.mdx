@@ -1,0 +1,468 @@
+---
+title: Contributing to Container Kit
+description: Learn how to contribute to Container Kit, from setting up your development environment to submitting pull requests.
+---
+
+<Warning>
+  **UNDER HEAVY DEVELOPMENT** - This project is actively being developed and may have breaking changes. Please check existing issues and discussions before starting major work.
+</Warning>
+
+We welcome contributions to Container Kit! Whether you're fixing bugs, adding features, improving documentation, or enhancing the developer experience, your contributions help make Container Kit better for everyone.
+
+## Getting Started
+
+### Prerequisites
+
+Before you begin, ensure you have:
+
+<Warning>
+  **IMPORTANT**: Container Kit requires macOS 26.0+ and only supports Apple Silicon Macs.
+</Warning>
+
+- **macOS 26.0+** with Apple Silicon (M1/M2/M3/M4) - Intel Macs not supported
+- **Xcode Command Line Tools**: `xcode-select --install`
+- **Node.js 20+** and **pnpm**: `npm install -g pnpm`
+- **Git** for version control
+- **Apple Container CLI** (optional, for container features)
+
+### Quick Start
+
+**Fork → Clone → `pnpm install` → `pnpm tauri dev` → Make changes → Submit PR**
+
+For detailed setup instructions, see the [Development Setup](/development/setup) guide.
+
+## Development Workflow
+
+### Branch Strategy
+
+- **`main`** - Stable release branch
+- **`develop`** - Integration branch for new features
+- **`feature/feature-name`** - Feature development
+- **`fix/issue-description`** - Bug fixes
+- **`docs/documentation-update`** - Documentation improvements
+
+### Standard Workflow
+
+<Steps>
+  <Step title="Create Feature Branch">
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+  </Step>
+
+  <Step title="Make Changes">
+    - Follow our [Code Standards](#code-standards)
+    - Write tests for new functionality
+    - Update documentation as needed
+  </Step>
+
+  <Step title="Test Your Changes">
+    <CodeGroup>
+      ```bash npm
+      npm run check
+      npm run format
+      npm run lint
+      npm run tauri:build
+      ```
+
+      ```bash pnpm
+      pnpm check
+      pnpm format
+      pnpm lint
+      pnpm tauri:build
+      ```
+
+      ```bash yarn
+      yarn check
+      yarn format
+      yarn lint
+      yarn tauri:build
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Commit Changes">
+    ```bash
+    git add .
+    git commit -m "feat: add your feature description"
+    ```
+    
+    See [Commit Message Guidelines](#commit-message-guidelines) for formatting.
+  </Step>
+
+  <Step title="Push and Create PR">
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+    
+    Then create a Pull Request on GitHub.
+  </Step>
+</Steps>
+
+## Code Standards
+
+### TypeScript
+
+- **Strict typing required** - No `any` types without justification
+- **Types over interfaces** - Use Types for object shapes
+- **Explicit return types** - For all public functions
+
+```typescript
+// ✅ Good
+type UserConfig = {
+    theme: 'light' | 'dark';
+    autoUpdate: boolean;
+};
+
+export function updateConfig(config: UserConfig): Promise<void> {
+    // implementation
+}
+
+// ❌ Avoid
+function updateConfig(config: any) {
+    // implementation
+}
+```
+
+### Svelte Components
+
+- **Component-scoped styles** - Use `<style>` blocks in components
+- **TypeScript in script blocks** - Always use `<script lang="ts">`
+- **Props with types** - Explicitly type all props
+
+```svelte
+<!-- ✅ Good -->
+<script lang="ts">
+    interface Props {
+        title: string;
+        isActive?: boolean;
+    }
+
+    let { title, isActive = false }: Props = $props();
+</script>
+
+<h1 class={[isActive ? 'active' : 'inactive', 'another-class']}>{title}</h1>
+
+<style>
+    .active {
+        color: var(--primary);
+    }
+    .inactive {
+        color: var(--muted);
+    }
+</style>
+```
+
+### Rust (Tauri Backend)
+
+- **Follow Rust conventions** - Use `cargo fmt` and `cargo clippy`
+- **Error handling** - Proper error types with context
+- **Documentation** - Doc comments for public APIs
+- **Testing** - Unit tests for complex logic
+
+```rust
+use tauri::Result;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContainerInfo {
+    pub id: String,
+    pub name: String,
+    pub status: ContainerStatus,
+}
+
+/// Retrieves container information by ID
+#[tauri::command]
+pub async fn get_container_info(id: String) -> Result<ContainerInfo> {
+    container_service::get_info(&id)
+        .await
+        .map_err(|e| format!("Failed to get container info: {}", e))
+}
+```
+
+### Database Schema (Drizzle)
+
+- **Descriptive table names** - Clear, singular nouns
+- **Consistent field naming** - camelCase for TypeScript compatibility
+- **Proper relationships** - Use foreign keys appropriately
+- **Migration versioning** - Sequential, descriptive migration names
+
+```typescript
+export const container = sqliteTable('container', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    status: text('status').$type<ContainerStatus>().notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+});
+```
+
+## Testing Guidelines
+
+### Frontend Testing
+
+- **Component tests** - Test component behavior and rendering (Storybook with tauri need to integrate it)
+- **Integration tests** - Test workflows
+- **Type tests** - Ensure TypeScript types are correct
+
+### Backend Testing
+
+- **Unit tests** - Test individual functions and modules
+- **Integration tests** - Test Tauri commands end-to-end
+- **Database tests** - Test schema and queries
+
+<Note>
+  **Development Priority**: Testing framework setup is needed.
+</Note>
+
+## Documentation Standards
+
+### Code Documentation
+
+- **TypeScript** - JSDoc comments for public APIs
+- **Svelte** - Component prop documentation
+- **Rust** - Doc comments (`///`) for public functions
+
+### README and Guides
+
+- **Clear headings** - Use consistent markdown structure
+- **Code examples** - Include working examples
+- **Step-by-step guides** - Break down complex processes
+- **Links and references** - Cross-reference related documentation
+
+## Commit Message Guidelines
+
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+### Format
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Types
+
+- **feat**: New feature
+- **fix**: Bug fix
+- **docs**: Documentation changes
+- **style**: Code style changes (formatting, semicolons, etc.)
+- **refactor**: Code refactoring without feature changes
+- **test**: Adding or updating tests
+- **chore**: Build process or auxiliary tool changes
+
+### Examples
+
+```bash
+feat: add container status monitoring
+feat(ui): add container status monitoring
+fix: resolve memory leak in container list
+docs: update API documentation for container commands
+style: format TypeScript files with prettier
+refactor: extract container service logic
+test: add unit tests for container operations
+chore: update build scripts for release automation
+```
+
+## Areas for Contribution
+
+### Bug Fixes
+
+- **UI inconsistencies** - Visual bugs and layout issues
+- **Performance issues** - Memory leaks, slow operations
+- **Compatibility problems** - Issues with different macOS versions (26.0+)
+- **Edge cases** - Handling of unusual input or states
+
+### New Features
+
+<Note>
+  Check existing issues and roadmap before starting new features during development phase.
+</Note>
+
+- **Container management** - New container operations and workflows
+- **UI improvements** - Better user experience and accessibility
+- **Apple integration** - Enhanced macOS container and sandbox features
+- **Developer tools** - CLI improvements and automation scripts
+- **Performance optimizations** - Faster operations and better resource usage
+
+### Documentation
+
+- **API documentation** - Document Tauri commands and TypeScript APIs
+- **User guides** - Step-by-step tutorials and how-to guides
+- **Developer guides** - Architecture documentation and contribution guides
+- **Code examples** - Real-world usage examples and best practices
+
+### UI/UX Improvements
+
+- **Accessibility** - Better keyboard navigation, screen reader support
+- **Design consistency** - Follow Apple Human Interface Guidelines
+- **Dark mode** - Improvements to dark theme implementation
+- **Responsive design** - Better support for different screen sizes
+
+## Pull Request Guidelines
+
+### Before Submitting
+
+- [ ] Code follows project style guidelines
+- [ ] Self-review of code completed
+- [ ] Tests added/updated for changes
+- [ ] Documentation updated if needed
+- [ ] No merge conflicts with main branch
+
+### PR Description Template
+
+```markdown
+## Summary
+
+Brief description of changes made.
+
+## Type of Change
+
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+
+## Testing
+
+Describe the tests that you ran to verify your changes:
+
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+
+## Screenshots (if applicable)
+
+Add screenshots to help explain your changes.
+
+## Checklist
+
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] New and existing unit tests pass locally with my changes
+```
+
+## Bug Reports
+
+### Before Reporting
+
+1. **Search existing issues** - Check if the bug is already reported
+2. **Try latest version** - Ensure you're using the most recent build
+3. **Minimal reproduction** - Create the smallest possible reproduction case
+
+### Bug Report Template
+
+```markdown
+## Bug Description
+
+A clear description of what the bug is.
+
+## Steps to Reproduce
+
+1. Go to '...'
+2. Click on '...'
+3. See error
+
+## Expected Behavior
+
+What you expected to happen.
+
+## Actual Behavior
+
+What actually happened.
+
+## Environment
+
+- macOS Version:
+- App Version:
+- Architecture: (Apple Silicon/Intel)
+
+## Additional Context
+
+Any other context, screenshots, or logs.
+```
+
+## Feature Requests
+
+### Feature Request Template
+
+```markdown
+## Feature Description
+
+A clear description of the feature you'd like to see.
+
+## Problem Statement
+
+What problem does this feature solve?
+
+## Proposed Solution
+
+How would you like this feature to work?
+
+## Alternative Solutions
+
+Any alternative solutions you've considered.
+
+## Additional Context
+
+Any other context, mockups, or examples.
+```
+
+## Security
+
+### Reporting Security Issues
+
+<Warning>
+  **DO NOT** create public GitHub issues for security vulnerabilities.
+</Warning>
+
+Instead, email security issues to: [shivam@ethercorps.io](mailto:shivam@ethercorps.io)
+
+Include:
+
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Any suggested fixes
+
+We'll respond within 48 hours and work with you to resolve the issue.
+
+### Security Best Practices
+
+- **Input validation** - Sanitize all user inputs
+- **Secure storage** - Encrypt sensitive data
+- **Authentication** - Proper session management
+- **Dependencies** - Keep dependencies updated
+
+## Recognition
+
+Contributors will be recognized in:
+
+- **README.md** - Contributors section
+- **Release notes** - Acknowledgment in release announcements
+- **GitHub** - Contributor badge and statistics
+
+## Getting Help
+
+- **GitHub Discussions** - [Project Discussions](https://github.com/etherCorps/ContainerKit/discussions)
+- **Email** - [shivam@ethercorps.io](mailto:shivam@ethercorps.io)
+
+## Additional Resources
+
+- [Tauri Documentation](https://tauri.app/)
+- [Svelte 5 Documentation](https://svelte.dev/)
+- [Rust Book](https://doc.rust-lang.org/book/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/)
+- [Shadcn-Svelte Documentation](https://shadcn-svelte.com/)
+
+---
+
+Thank you for contributing to Container Kit! Your contributions help make Apple container management better for everyone.

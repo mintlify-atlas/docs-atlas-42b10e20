@@ -1,0 +1,333 @@
+---
+title: Development Environment Setup
+description: Set up your local development environment for Container Kit development.
+---
+
+<Warning>
+  Container Kit requires **macOS 26.0+** with **Apple Silicon** (M1/M2/M3/M4). Intel Macs and older macOS versions are not supported.
+</Warning>
+
+This guide will walk you through setting up your development environment for Container Kit.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+### Required Software
+
+- **macOS 26.0 or later** with Apple Silicon (M1/M2/M3/M4)
+- **Xcode Command Line Tools**
+- **Node.js 20+**
+- **pnpm** package manager
+- **Git** for version control
+
+### Optional Software
+
+- **Apple Container CLI** - For container management features
+
+## Installation Steps
+
+<Steps>
+  <Step title="Install Xcode Command Line Tools">
+    Open Terminal and run:
+
+    ```bash
+    xcode-select --install
+    ```
+
+    Follow the prompts to complete the installation.
+  </Step>
+
+  <Step title="Install Node.js">
+    Download and install Node.js 20+ from [nodejs.org](https://nodejs.org/) or use a version manager like [nvm](https://github.com/nvm-sh/nvm):
+
+    ```bash
+    # Using nvm
+    nvm install 20
+    nvm use 20
+    ```
+  </Step>
+
+  <Step title="Install pnpm">
+    Install pnpm globally:
+
+    <CodeGroup>
+      ```bash npm
+      npm install -g pnpm
+      ```
+
+      ```bash Homebrew
+      brew install pnpm
+      ```
+
+      ```bash curl
+      curl -fsSL https://get.pnpm.io/install.sh | sh -
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Fork and Clone Repository">
+    Fork the Container Kit repository on GitHub, then clone your fork:
+
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/ContainerKit.git
+    cd ContainerKit
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install project dependencies using pnpm:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm install
+      ```
+
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Download Apple Container CLI">
+    Download and extract the Apple Container CLI (macOS only):
+
+    ```bash
+    ./scripts/download-apple-container-cli.sh
+    ```
+
+    This script downloads the Apple Container CLI and places it in the correct location for Tauri sidecar integration.
+  </Step>
+
+  <Step title="Environment Configuration">
+    Create a `.env` file for Tauri signing (optional for development):
+
+    ```bash
+    touch .env
+    ```
+
+    If you need to build signed releases, add your signing keys:
+
+    ```bash
+    # .env
+    TAURI_SIGNING_PRIVATE_KEY=your_key_here
+    TAURI_SIGNING_PRIVATE_KEY_PASSWORD=your_password_here
+    ```
+
+    <Note>
+      Signing keys are only required for production builds. Development builds do not require signing.
+    </Note>
+  </Step>
+
+  <Step title="Generate Database Migrations">
+    Generate the database schema and migrations:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm db:generate
+      ```
+
+      ```bash npm
+      npm run db:generate
+      ```
+
+      ```bash yarn
+      yarn db:generate
+      ```
+    </CodeGroup>
+
+    This command generates SQL migrations from the Drizzle schema and creates Rust migration bindings.
+  </Step>
+
+  <Step title="Verify Setup">
+    Start the development server to verify everything is working:
+
+    <CodeGroup>
+      ```bash pnpm
+      pnpm tauri dev
+      ```
+
+      ```bash npm
+      npm run dev
+      ```
+
+      ```bash yarn
+      yarn dev
+      ```
+    </CodeGroup>
+
+    The application should launch with hot reload enabled. Any changes you make to the frontend code will automatically reload.
+  </Step>
+</Steps>
+
+## Recommended IDE Setup
+
+### Zed (Recommended)
+
+**[Zed](https://zed.dev/)** - Fast, lightweight editor with excellent Rust and TypeScript support
+
+Project settings are available in `.zed/settings.json` - only modify if you need to update specific configurations.
+
+### WebStorm
+
+**[WebStorm](https://www.jetbrains.com/webstorm/)** - Full-featured IDE with comprehensive tooling (memory intensive)
+
+### VS Code
+
+**[VS Code](https://code.visualstudio.com/)** - Popular editor with extensive extensions
+
+#### Recommended Extensions
+
+- **Svelte for VS Code** - Syntax highlighting and IntelliSense for Svelte
+- **Tauri** - Tauri framework support
+- **rust-analyzer** - Rust language support
+- **Tailwind CSS IntelliSense** - Tailwind CSS class name completion
+- **Prettier** - Code formatter
+
+## Development Tools
+
+### Database Tools
+
+- **Drizzle Studio** - Visual database explorer (coming soon)
+- **DB Browser for SQLite** - View and edit SQLite databases
+
+### Debugging Tools
+
+- **Browser DevTools** - Built into the Tauri webview
+- **Rust LLDB** - Debug Rust backend code
+- **Console** - macOS Console app for system logs
+
+## Troubleshooting
+
+### Build Failures
+
+If you encounter build errors:
+
+```bash
+# Clean and rebuild
+rm -rf node_modules .svelte-kit build
+pnpm install
+pnpm tauri:build
+```
+
+### Database Issues
+
+If you have database migration problems:
+
+<CodeGroup>
+  ```bash pnpm
+  # Regenerate migrations
+  pnpm db:generate
+  ```
+
+  ```bash npm
+  npm run db:generate
+  ```
+
+  ```bash yarn
+  yarn db:generate
+  ```
+</CodeGroup>
+
+### Tauri Build Issues
+
+Check your Tauri setup:
+
+```bash
+pnpm tauri info
+```
+
+This will display your environment configuration and identify any missing dependencies.
+
+### Apple Container CLI Issues
+
+If the Apple Container CLI download fails:
+
+1. Check your internet connection
+2. Verify you're on macOS 26.0+
+3. Try downloading manually from the Apple Developer portal
+4. Run the download script again: `./scripts/download-apple-container-cli.sh`
+
+## Next Steps
+
+Now that your development environment is set up:
+
+1. Review the [Project Structure](/development/project-structure) to understand the codebase
+2. Check out the [Available Scripts](/development/scripts) for development commands
+3. Read the [Contributing Guide](/development/contributing) for coding standards and workflow
+
+## Common Development Commands
+
+<CodeGroup>
+  ```bash pnpm
+  # Start development server
+  pnpm tauri dev
+
+  # Run type checking
+  pnpm check
+
+  # Format code
+  pnpm format
+
+  # Lint code
+  pnpm lint
+
+  # Generate database migrations
+  pnpm db:generate
+
+  # Build for production
+  pnpm tauri:build
+  ```
+
+  ```bash npm
+  # Start development server
+  npm run dev
+
+  # Run type checking
+  npm run check
+
+  # Format code
+  npm run format
+
+  # Lint code
+  npm run lint
+
+  # Generate database migrations
+  npm run db:generate
+
+  # Build for production
+  npm run tauri:build
+  ```
+
+  ```bash yarn
+  # Start development server
+  yarn dev
+
+  # Run type checking
+  yarn check
+
+  # Format code
+  yarn format
+
+  # Lint code
+  yarn lint
+
+  # Generate database migrations
+  yarn db:generate
+
+  # Build for production
+  yarn tauri:build
+  ```
+</CodeGroup>
+
+## Getting Help
+
+If you encounter any issues during setup:
+
+- Check the [GitHub Discussions](https://github.com/etherCorps/ContainerKit/discussions)
+- Search [GitHub Issues](https://github.com/etherCorps/container-kit/issues)
+- Email [shivam@ethercorps.io](mailto:shivam@ethercorps.io)

@@ -1,0 +1,768 @@
+---
+title: "Troubleshooting"
+description: "Solutions to common issues and errors in Container Kit"
+---
+
+## Overview
+
+This guide helps you diagnose and resolve common issues you may encounter while using Container Kit. Find solutions organized by category below.
+
+<Tip>
+  Before troubleshooting, ensure you're running the latest version of Container Kit and macOS 26.0+.
+</Tip>
+
+## Installation Issues
+
+<AccordionGroup>
+  <Accordion title="Application won't open" icon="triangle-exclamation">
+    **Symptoms:** Container Kit doesn't launch or crashes immediately on startup.
+    
+    **Solutions:**
+    
+    1. **Check macOS version:**
+       ```bash
+       sw_vers
+       ```
+       Ensure you have macOS 26.0 or later.
+    
+    2. **Verify Apple Silicon:**
+       ```bash
+       uname -m
+       # Should output: arm64
+       ```
+       Container Kit only supports Apple Silicon Macs.
+    
+    3. **Right-click and Open (first time):**
+       - Right-click Container Kit in Applications
+       - Select **Open**
+       - Click **Open** in the security dialog
+    
+    4. **Check Console for errors:**
+       - Open **Console.app**
+       - Search for "Container Kit"
+       - Look for crash reports or error messages
+    
+    5. **Remove quarantine attribute:**
+       ```bash
+       xattr -d com.apple.quarantine /Applications/Container\ Kit.app
+       ```
+    
+    6. **Reinstall the application:**
+       - Delete Container Kit from Applications
+       - Empty Trash
+       - Reinstall from DMG or rebuild from source
+  </Accordion>
+  
+  <Accordion title="Container CLI not found" icon="terminal">
+    **Symptoms:** Error message "Container CLI not found" or "container command not available".
+    
+    **Solutions:**
+    
+    1. **Download Apple Container CLI:**
+       ```bash
+       cd /path/to/ContainerKit
+       ./scripts/download-apple-container-cli.sh
+       ```
+    
+    2. **Verify binaries exist:**
+       ```bash
+       ls -la src-tauri/binaries/
+       # Should show container and container-api-server
+       ```
+    
+    3. **Create symbolic links:**
+       - Open Container Kit
+       - Go to **Settings** > **System**
+       - Click **Reinstall Container CLI**
+       - Enter your password when prompted
+    
+    4. **Manual symlink creation:**
+       ```bash
+       sudo ln -sf /Applications/Container\ Kit.app/Contents/Resources/binaries/container /usr/local/bin/container
+       ```
+    
+    5. **Verify installation:**
+       ```bash
+       which container
+       container --version
+       ```
+  </Accordion>
+  
+  <Accordion title="Permission denied errors" icon="lock">
+    **Symptoms:** Operations fail with "permission denied" or "access denied" errors.
+    
+    **Solutions:**
+    
+    1. **Grant Full Disk Access:**
+       - Open **System Settings** > **Privacy & Security**
+       - Click **Full Disk Access**
+       - Enable Container Kit
+       - Restart Container Kit
+    
+    2. **Check file permissions:**
+       ```bash
+       ls -la ~/Library/Application\ Support/ContainerKit/
+       ```
+       Files should be owned by your user.
+    
+    3. **Reset permissions:**
+       ```bash
+       chmod -R 755 ~/Library/Application\ Support/ContainerKit/
+       ```
+    
+    4. **Run with admin privileges (if required):**
+       Some operations (like starting the containerization service) require administrator access and will prompt for your password.
+  </Accordion>
+</AccordionGroup>
+
+## Service Issues
+
+<AccordionGroup>
+  <Accordion title="Containerization service won't start" icon="power-off">
+    **Symptoms:** Service status shows "Stopped" or "Error", can't start the service.
+    
+    **Solutions:**
+    
+    1. **Check service status:**
+       ```bash
+       container s status
+       ```
+    
+    2. **View service logs:**
+       ```typescript
+       // In Container Kit: Settings > System > Service Logs
+       import { containerizationStatus } from '$lib/services/containerization/system/service';
+       
+       const result = await containerizationStatus();
+       console.log(result.stdout);
+       ```
+    
+    3. **Stop and restart service:**
+       ```bash
+       container s stop
+       sleep 3
+       container s start
+       ```
+    
+    4. **Check for conflicting services:**
+       - Ensure no other container management tools are running
+       - Stop Docker Desktop or other container runtimes
+    
+    5. **Verify system requirements:**
+       - macOS 26.0 or later
+       - Apple Silicon processor
+       - Sufficient free memory (at least 2GB)
+    
+    6. **Reboot your Mac:**
+       Some service issues resolve after a system restart.
+  </Accordion>
+  
+  <Accordion title="Service keeps stopping" icon="circle-stop">
+    **Symptoms:** Containerization service stops unexpectedly or won't stay running.
+    
+    **Solutions:**
+    
+    1. **Check system resources:**
+       - Monitor CPU usage in Activity Monitor
+       - Ensure sufficient free RAM
+       - Verify disk space available
+    
+    2. **Review crash logs:**
+       ```bash
+       log show --predicate 'process == "container"' --last 1h
+       ```
+    
+    3. **Disable auto-sleep settings:**
+       - System Settings > Energy Saver
+       - Adjust sleep settings
+    
+    4. **Check for system updates:**
+       Ensure macOS is fully updated.
+    
+    5. **Reinstall Container CLI:**
+       - Settings > System > Reinstall Container CLI
+       - Restart the service
+  </Accordion>
+</AccordionGroup>
+
+## Container Issues
+
+<AccordionGroup>
+  <Accordion title="Container won't start" icon="box">
+    **Symptoms:** Container fails to start or immediately exits.
+    
+    **Solutions:**
+    
+    1. **Check container logs:**
+       ```typescript
+       import { getContainerLogs } from '$lib/services/containerization/containers';
+       
+       const result = await getContainerLogs('container-id');
+       console.log(result.stdout);
+       ```
+    
+    2. **Inspect container configuration:**
+       ```typescript
+       import { inspectContainer } from '$lib/services/containerization/containers';
+       
+       const result = await inspectContainer('container-id');
+       const config = JSON.parse(result.stdout);
+       ```
+    
+    3. **Verify the image exists:**
+       - Navigate to Images tab
+       - Confirm the source image is present
+       - Try pulling the image again if missing
+    
+    4. **Check for port conflicts:**
+       ```bash
+       lsof -i :8080  # Replace 8080 with your port
+       ```
+       Kill conflicting processes or use a different port.
+    
+    5. **Verify resource limits:**
+       Ensure container memory/CPU limits aren't too restrictive.
+    
+    6. **Test with a simple container:**
+       ```bash
+       container run hello-world
+       ```
+       If this works, the issue is with your specific container configuration.
+  </Accordion>
+  
+  <Accordion title="Container keeps stopping" icon="circle-pause">
+    **Symptoms:** Container starts but stops after a few seconds.
+    
+    **Solutions:**
+    
+    1. **Check exit code:**
+       Inspect the container to see why it exited:
+       - Exit code 0: Normal exit
+       - Exit code 1: Application error
+       - Exit code 137: Killed (out of memory)
+       - Exit code 139: Segmentation fault
+    
+    2. **Ensure main process stays running:**
+       The container's main process must run in the foreground:
+       
+       ✅ Good: `nginx -g 'daemon off;'`
+       
+       ❌ Bad: `nginx` (daemonizes and exits)
+    
+    3. **Review application logs:**
+       Check container logs for application errors.
+    
+    4. **Increase resource limits:**
+       Container may need more memory or CPU.
+    
+    5. **Test command manually:**
+       ```bash
+       container exec <id> /bin/sh -c 'your-command'
+       ```
+  </Accordion>
+  
+  <Accordion title="Can't remove container" icon="trash">
+    **Symptoms:** Container removal fails or shows "container is running" error.
+    
+    **Solutions:**
+    
+    1. **Stop the container first:**
+       ```typescript
+       import { stopContainer, removeContainer } from '$lib/services/containerization/containers';
+       
+       await stopContainer('container-id');
+       await removeContainer('container-id');
+       ```
+    
+    2. **Force removal (if stopped fails):**
+       ```bash
+       container rm -f container-id
+       ```
+    
+    3. **Check for dependent containers:**
+       Some containers may depend on others (e.g., linked containers).
+    
+    4. **Restart containerization service:**
+       ```bash
+       container s restart
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Image Issues
+
+<AccordionGroup>
+  <Accordion title="Image pull fails" icon="download">
+    **Symptoms:** Pulling an image fails with timeout, network, or authentication errors.
+    
+    **Solutions:**
+    
+    1. **Check internet connection:**
+       ```bash
+       ping -c 4 google.com
+       ```
+    
+    2. **Verify image name and tag:**
+       - Correct format: `repository:tag`
+       - Example: `nginx:latest`, `redis:7.0-alpine`
+    
+    3. **Test registry connectivity:**
+       ```bash
+       curl -I https://registry-1.docker.io
+       ```
+    
+    4. **Authenticate for private images:**
+       - Settings > Registry > Add Registry
+       - Enter credentials for private registries
+    
+    5. **Check registry rate limits:**
+       Some registries limit pull requests. Wait and retry.
+    
+    6. **Try a different registry mirror:**
+       ```bash
+       container image pull mirror.gcr.io/library/nginx:latest
+       ```
+    
+    7. **Increase timeout:**
+       For large images, the pull may timeout. Retry the operation.
+  </Accordion>
+  
+  <Accordion title="Image won't remove" icon="layer-group">
+    **Symptoms:** Can't delete an image, "image is being used" error.
+    
+    **Solutions:**
+    
+    1. **Check for dependent containers:**
+       ```typescript
+       import { getAllContainers } from '$lib/services/containerization/containers';
+       
+       const result = await getAllContainers();
+       // Look for containers using this image
+       ```
+    
+    2. **Remove containers first:**
+       ```typescript
+       import { removeContainer } from '$lib/services/containerization/containers';
+       
+       // Remove each container using the image
+       await removeContainer('container-id');
+       ```
+    
+    3. **Remove by image ID (for multi-tagged images):**
+       ```typescript
+       import { removeImage } from '$lib/services/containerization/images';
+       
+       await removeImage('image-id');
+       ```
+    
+    4. **Force removal (caution):**
+       ```bash
+       container image rm -f image-name:tag
+       ```
+  </Accordion>
+  
+  <Accordion title="Architecture mismatch" icon="microchip">
+    **Symptoms:** "exec format error" or "platform mismatch" when running containers.
+    
+    **Solutions:**
+    
+    1. **Check system architecture:**
+       ```bash
+       uname -m
+       # Apple Silicon should show: arm64
+       ```
+    
+    2. **Pull correct architecture:**
+       For Apple Silicon, you need arm64/aarch64 images:
+       ```bash
+       container image pull --platform linux/arm64 nginx:latest
+       ```
+    
+    3. **Verify image architecture:**
+       ```typescript
+       import { inspectImage } from '$lib/services/containerization/images';
+       
+       const result = await inspectImage('nginx:latest');
+       const info = JSON.parse(result.stdout);
+       console.log(info.Architecture);  // Should be arm64
+       ```
+    
+    4. **Use multi-architecture images:**
+       Many official images support multiple architectures automatically.
+    
+    5. **Export with explicit architecture:**
+       ```typescript
+       import { exportImageToTar } from '$lib/services/containerization/images';
+       
+       await exportImageToTar(
+         'nginx:latest',
+         '/path/to/output.tar',
+         ['--arch', 'aarch64']
+       );
+       ```
+  </Accordion>
+  
+  <Accordion title="Import/Export fails" icon="file-import">
+    **Symptoms:** Image import or export operations fail or produce corrupted files.
+    
+    **Solutions:**
+    
+    1. **Verify disk space:**
+       ```bash
+       df -h
+       ```
+       Ensure sufficient space for the tar file.
+    
+    2. **Check file integrity:**
+       ```bash
+       tar -tzf /path/to/image.tar
+       ```
+       Verify the tar file isn't corrupted.
+    
+    3. **Re-export with explicit options:**
+       ```typescript
+       import { exportImageToTar } from '$lib/services/containerization/images';
+       
+       await exportImageToTar(
+         'image:tag',
+         '/path/to/output.tar',
+         ['--arch', 'aarch64']
+       );
+       ```
+    
+    4. **Import from verified source:**
+       Ensure the tar file was created by a compatible container system.
+    
+    5. **Check file permissions:**
+       ```bash
+       ls -la /path/to/image.tar
+       # Should be readable
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Network Issues
+
+<AccordionGroup>
+  <Accordion title="Can't access container from browser" icon="network-wired">
+    **Symptoms:** Can't connect to container web service via localhost or browser.
+    
+    **Solutions:**
+    
+    1. **Verify container is running:**
+       Check container status in Containers tab.
+    
+    2. **Test local connectivity:**
+       ```bash
+       curl -v http://localhost:8080
+       ```
+    
+    3. **Check port mapping:**
+       Inspect container to verify port mapping is correct:
+       ```typescript
+       import { inspectContainer } from '$lib/services/containerization/containers';
+       
+       const result = await inspectContainer('container-id');
+       const config = JSON.parse(result.stdout);
+       console.log(config.NetworkSettings.Ports);
+       ```
+    
+    4. **Verify application is listening:**
+       ```bash
+       container exec <id> netstat -tuln
+       ```
+       App should be listening on 0.0.0.0 or container IP.
+    
+    5. **Check firewall:**
+       - System Settings > Network > Firewall
+       - Ensure Container Kit is allowed
+       - Try temporarily disabling firewall to test
+    
+    6. **Review container logs:**
+       Look for binding errors or startup failures.
+  </Accordion>
+  
+  <Accordion title="Port conflicts" icon="plug">
+    **Symptoms:** "port already in use" or "address already in use" errors.
+    
+    **Solutions:**
+    
+    1. **Find what's using the port:**
+       ```bash
+       lsof -i :8080
+       # or
+       netstat -an | grep 8080
+       ```
+    
+    2. **Stop the conflicting service:**
+       ```bash
+       # Kill process by PID
+       kill -9 <PID>
+       ```
+    
+    3. **Use a different port:**
+       Change the host port mapping:
+       - 8080:80 → 8081:80
+       - 3306:3306 → 3307:3306
+    
+    4. **Stop other containers:**
+       Check if another container is using the same port.
+  </Accordion>
+  
+  <Accordion title="No internet in containers" icon="globe">
+    **Symptoms:** Containers can't reach external websites or APIs.
+    
+    **Solutions:**
+    
+    1. **Test DNS resolution:**
+       ```bash
+       container exec <id> nslookup google.com
+       ```
+    
+    2. **Test direct IP connectivity:**
+       ```bash
+       container exec <id> ping 8.8.8.8
+       ```
+    
+    3. **Check system DNS:**
+       - System Settings > Network > DNS
+       - Add 8.8.8.8 or 1.1.1.1 if needed
+    
+    4. **Verify NAT is working:**
+       Containers use NAT for internet access.
+    
+    5. **Restart containerization service:**
+       ```bash
+       container s restart
+       ```
+    
+    6. **Check network configuration:**
+       ```bash
+       container inspect <id> | grep -A 20 NetworkSettings
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Issues
+
+<AccordionGroup>
+  <Accordion title="Slow container performance" icon="gauge">
+    **Symptoms:** Containers run slowly or lag.
+    
+    **Solutions:**
+    
+    1. **Check system resources:**
+       - Open Activity Monitor
+       - Look for high CPU or memory usage
+       - Close unnecessary applications
+    
+    2. **Monitor container resources:**
+       ```bash
+       # View resource usage (when stats are available)
+       container stats <container-id>
+       ```
+    
+    3. **Increase resource limits:**
+       Allocate more CPU/memory to containers if needed.
+    
+    4. **Optimize container image:**
+       - Use lighter base images (Alpine)
+       - Remove unnecessary files
+       - Minimize layers
+    
+    5. **Check disk I/O:**
+       Slow disk can affect container performance.
+    
+    6. **Restart the container:**
+       Sometimes a fresh start resolves performance issues.
+  </Accordion>
+  
+  <Accordion title="High memory usage" icon="memory">
+    **Symptoms:** Container Kit or containers consuming excessive RAM.
+    
+    **Solutions:**
+    
+    1. **Check memory usage:**
+       ```bash
+       # Activity Monitor: Memory tab
+       # Look for Container Kit and container processes
+       ```
+    
+    2. **Stop unused containers:**
+       ```typescript
+       import { stopContainer } from '$lib/services/containerization/containers';
+       
+       // Stop containers you're not using
+       await stopContainer('container-id');
+       ```
+    
+    3. **Remove unused images:**
+       Free up memory and disk space:
+       ```typescript
+       import { removeImage } from '$lib/services/containerization/images';
+       
+       // Remove images you don't need
+       await removeImage('unused-image:tag');
+       ```
+    
+    4. **Set memory limits:**
+       Restrict container memory usage (when available in UI).
+    
+    5. **Restart Container Kit:**
+       Close and reopen the application.
+  </Accordion>
+</AccordionGroup>
+
+## Database and Storage Issues
+
+<AccordionGroup>
+  <Accordion title="Database connection refused" icon="database">
+    **Symptoms:** Can't connect to database container.
+    
+    **Solutions:**
+    
+    1. **Verify container is running:**
+       Database containers must be in "Running" state.
+    
+    2. **Check port mapping:**
+       Ensure database port is correctly mapped:
+       - MySQL: 3306:3306
+       - PostgreSQL: 5432:5432
+       - MongoDB: 27017:27017
+    
+    3. **Wait for database initialization:**
+       Databases need time to initialize on first start. Check logs:
+       ```typescript
+       import { getContainerLogs } from '$lib/services/containerization/containers';
+       
+       const result = await getContainerLogs('db-container-id');
+       // Look for "ready for connections" or similar
+       ```
+    
+    4. **Use correct connection string:**
+       ```bash
+       # From host
+       mysql -h 127.0.0.1 -P 3306 -u user -p
+       
+       # From another container
+       mysql -h <db-container-ip> -P 3306 -u user -p
+       ```
+    
+    5. **Check authentication:**
+       Verify username, password, and database name.
+  </Accordion>
+  
+  <Accordion title="Data loss after container restart" icon="hard-drive">
+    **Symptoms:** Container data disappears when container is restarted or removed.
+    
+    **Solutions:**
+    
+    1. **Use volumes for persistent data:**
+       Mount volumes when creating containers to persist data:
+       - Database data directories
+       - User uploads
+       - Configuration files
+    
+    2. **Don't store data in container filesystem:**
+       Data in the container layer is ephemeral.
+    
+    3. **Export data before removal:**
+       Back up important data before removing containers.
+    
+    4. **Use database backups:**
+       Regularly export database dumps to the host:
+       ```bash
+       container exec <id> mysqldump -u user -p database > backup.sql
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Getting Help
+
+If you can't resolve your issue:
+
+<Steps>
+  <Step title="Gather Information">
+    Collect the following:
+    - macOS version: `sw_vers`
+    - Container Kit version: Check About menu
+    - Error messages: Screenshots or text
+    - Container logs: Export from Logs view
+    - System logs: Relevant Console.app entries
+  </Step>
+  
+  <Step title="Search Existing Issues">
+    Check if your issue is already reported:
+    - [GitHub Issues](https://github.com/etherCorps/ContainerKit/issues)
+    - [GitHub Discussions](https://github.com/etherCorps/ContainerKit/discussions)
+  </Step>
+  
+  <Step title="Create a New Issue">
+    If your issue isn't already reported:
+    1. Go to [GitHub Issues](https://github.com/etherCorps/ContainerKit/issues/new)
+    2. Choose appropriate template
+    3. Provide all collected information
+    4. Include steps to reproduce
+  </Step>
+  
+  <Step title="Join the Discussion">
+    For questions and general help:
+    - [GitHub Discussions](https://github.com/etherCorps/ContainerKit/discussions)
+    - Email: [shivam@ethercorps.io](mailto:shivam@ethercorps.io)
+  </Step>
+</Steps>
+
+<Note>
+  When reporting issues, please include your macOS version, Container Kit version, and detailed steps to reproduce the problem.
+</Note>
+
+## Diagnostic Commands
+
+Useful commands for troubleshooting:
+
+```bash
+# System information
+sw_vers                           # macOS version
+uname -m                          # Architecture
+
+# Container CLI
+container --version               # CLI version
+container s status                # Service status
+
+# Container operations
+container ls -a                   # List all containers
+container image ls                # List all images
+container inspect <container-id>  # Container details
+container logs <container-id>     # Container logs
+
+# Network diagnostics
+lsof -i :<port>                   # What's using a port
+netstat -an | grep <port>         # Port status
+ping -c 4 google.com              # Internet connectivity
+nslookup google.com               # DNS resolution
+
+# System diagnostics
+df -h                             # Disk space
+top -o mem                        # Memory usage
+log show --last 1h                # System logs
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="rocket" href="/guides/getting-started">
+    Back to setup basics
+  </Card>
+  
+  <Card title="Container Management" icon="box" href="/guides/container-management">
+    Learn container operations
+  </Card>
+  
+  <Card title="Image Management" icon="layer-group" href="/guides/image-management">
+    Manage container images
+  </Card>
+  
+  <Card title="Networking" icon="network-wired" href="/guides/networking">
+    Configure container networking
+  </Card>
+</CardGroup>

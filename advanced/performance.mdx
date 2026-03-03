@@ -1,0 +1,585 @@
+---
+title: 'Performance Optimizations'
+description: 'Performance techniques, optimizations, and benchmarking in Container Kit'
+---
+
+Container Kit is built for performance using Rust's zero-cost abstractions, Svelte's efficient reactivity, and optimized database queries.
+
+## Performance Stack
+
+<CardGroup cols={3}>
+  <Card title="Rust Backend" icon="bolt">
+    Native performance with async I/O
+  </Card>
+  <Card title="Svelte 5 Runes" icon="gauge-high">
+    Fine-grained reactivity
+  </Card>
+  <Card title="SQLite" icon="database">
+    In-process database with no network latency
+  </Card>
+</CardGroup>
+
+## Backend Performance
+
+### Async Runtime with Tokio
+
+Container Kit uses Tokio for efficient async operations:
+
+```rust src-tauri/src/main.rs
+#[tokio::main]
+async fn main() {
+    let _ = fix_path_env::fix();
+    container_kit_lib::run().await;
+}
+```
+
+### Benefits of Async I/O
+
+<Steps>
+  <Step title="Non-Blocking Operations">
+    While waiting for container operations, the app remains responsive to user interactions.
+  </Step>
+  
+  <Step title="Concurrent Execution">
+    Multiple container commands can run simultaneously without blocking:
+    
+    ```rust
+    #[tauri::command]
+    #[specta::specta]
+    pub async fn run_container_command_with_stdin(
+        args: Vec<String>,
+        stdin: String,
+    ) -> Result<CommandResult, String> {
+        // Async execution
+    }
+    ```
+  </Step>
+  
+  <Step title="Resource Efficiency">
+    Tokio's work-stealing scheduler efficiently manages threads across CPU cores.
+  </Step>
+</Steps>
+
+### Command Execution
+
+Container commands are executed asynchronously with streaming support:
+
+```rust src-tauri/src/commands/utils.rs
+use std::io::{BufReader, Read};
+use std::process::Stdio;
+use tokio::task;
+
+#[tauri::command]
+#[specta::specta]
+pub async fn stream_container_command(
+    args: Vec<String>, 
+    event_name: String
+) -> Result<(), String> {
+    let container_cli = "container".to_string();
+
+    let mut child = Command::new(&container_cli)
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn command: {}", e))?;
+
+    let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
+
+    // Stream output asynchronously
+    task::spawn(async move {
+        let mut reader = BufReader::new(stdout);
+        let mut buffer = [0u8; 1024];
+
+        loop {
+            let bytes_read = reader.read(&mut buffer).unwrap_or(0);
+            if bytes_read == 0 {
+                break;
+            }
+            // Process chunk
+        }
+    });
+
+    Ok(())
+}
+```
+
+### Key Optimizations
+
+<AccordionGroup>
+  <Accordion title="Buffered Reading">
+    Uses `BufReader` for efficient I/O:
+    
+    ```rust
+    let mut reader = BufReader::new(stdout);
+    let mut buffer = [0u8; 1024];
+    ```
+  </Accordion>
+
+  <Accordion title="Non-Blocking Spawning">
+    Spawns commands without blocking the main thread:
+    
+    ```rust
+    task::spawn(async move {
+        // Long-running operation
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Chunked Processing">
+    Processes output in 1KB chunks to balance memory and latency.
+  </Accordion>
+</AccordionGroup>
+
+## Frontend Performance
+
+### Svelte 5 Reactivity
+
+Svelte 5's runes provide fine-grained reactivity:
+
+```svelte
+<script lang="ts">
+    import { getAllContainers } from '$lib/services/containerization/containers';
+    
+    let containers = $state([]);
+    let loading = $state(false);
+    
+    async function loadContainers() {
+        loading = true;
+        try {
+            const result = await getAllContainers();
+            containers = JSON.parse(result.stdout);
+        } finally {
+            loading = false;
+        }
+    }
+</script>
+
+{#if loading}
+    <LoadingSpinner />
+{:else}
+    {#each containers as container (container.id)}
+        <ContainerCard {container} />
+    {/each}
+{/if}
+```
+
+### Reactivity Benefits
+
+<CardGroup cols={2}>
+  <Card title="Minimal Re-renders" icon="arrows-rotate">
+    Only components using changed state re-render.
+  </Card>
+  
+  <Card title="Compile-Time Optimization" icon="code">
+    Svelte compiles to optimized vanilla JavaScript.
+  </Card>
+  
+  <Card title="No Virtual DOM" icon="circle-xmark">
+    Direct DOM manipulation is faster than diffing.
+  </Card>
+  
+  <Card title="Keyed Lists" icon="key">
+    Using `(container.id)` enables efficient list updates.
+  </Card>
+</CardGroup>
+
+### Service Layer Caching
+
+Cache expensive operations:
+
+```typescript src/lib/services/containerization/containers.ts
+import { createContainerCommand, validateCommandOutput } from './utils';
+
+let containersCache: Output | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 5000; // 5 seconds
+
+export async function getAllContainers(force = false): Promise<Output> {
+    const now = Date.now();
+    
+    // Return cached data if fresh
+    if (!force && containersCache && (now - cacheTimestamp) < CACHE_TTL) {
+        return containersCache;
+    }
+    
+    const command = createContainerCommand(['ls', '-a', '--format', 'json']);
+    const output = await command.execute();
+    
+    containersCache = validateCommandOutput(output);
+    cacheTimestamp = now;
+    
+    return containersCache;
+}
+
+export function invalidateContainersCache() {
+    containersCache = null;
+}
+```
+
+<Note>
+Invalidate cache after mutations (start, stop, remove) to keep UI in sync.
+</Note>
+
+### Component Lazy Loading
+
+Load heavy components only when needed:
+
+```svelte
+<script lang="ts">
+    let showTerminal = $state(false);
+    
+    // Lazy import
+    const Terminal = import('$lib/components/features/Terminal.svelte');
+</script>
+
+{#if showTerminal}
+    {#await Terminal then { default: TerminalComponent }}
+        <TerminalComponent />
+    {/await}
+{/if}
+```
+
+## Database Performance
+
+### Connection Pooling
+
+While SQLite is single-threaded, minimize connection overhead:
+
+```typescript src/lib/db/index.ts
+export const db = drizzle<typeof schema>(
+    async (sql: string, params: string[], method: string) => {
+        const sqlite = await Database.load('sqlite:container-kit.db');
+        
+        try {
+            // Execute query
+            if (isSelectQuery(sql)) {
+                rows = await sqlite.select(sql, params);
+            } else {
+                await sqlite.execute(sql, params);
+                return { rows: [] };
+            }
+            
+            return { rows: results };
+        } finally {
+            await sqlite.close(); // Always close
+        }
+    },
+    { schema: schema, logger: true }
+);
+```
+
+### Query Optimization
+
+<Tabs>
+  <Tab title="Indexes">
+    Use indexes on frequently queried columns:
+    
+    ```typescript
+    export const registry = sqliteTable('registry', {
+        id: text('id').primaryKey(),
+        url: text('url').unique().notNull(), // Automatic index
+        name: text('name').notNull()
+    }, (table) => ({
+        nameIdx: index('name_idx').on(table.name) // Explicit index
+    }));
+    ```
+  </Tab>
+  
+  <Tab title="Selective Queries">
+    Only select needed columns:
+    
+    ```typescript
+    // Good - specific columns
+    const urls = await db.select({ url: registry.url }).from(registry);
+    
+    // Avoid - selects all columns
+    const all = await db.select().from(registry);
+    ```
+  </Tab>
+  
+  <Tab title="Batch Operations">
+    Use batch inserts/updates:
+    
+    ```typescript
+    // Good - single query
+    await db.insert(registry).values([
+        { name: 'Registry 1', url: 'https://r1.io' },
+        { name: 'Registry 2', url: 'https://r2.io' }
+    ]);
+    
+    // Avoid - multiple queries
+    await db.insert(registry).values({ name: 'Registry 1', url: 'https://r1.io' });
+    await db.insert(registry).values({ name: 'Registry 2', url: 'https://r2.io' });
+    ```
+  </Tab>
+  
+  <Tab title="Prepared Statements">
+    Drizzle uses parameterized queries (prepared statements) automatically:
+    
+    ```typescript
+    // Automatically parameterized
+    const result = await db
+        .select()
+        .from(registry)
+        .where(eq(registry.id, userId));
+    ```
+  </Tab>
+</Tabs>
+
+### Database Size Management
+
+```typescript
+import Database from '@tauri-apps/plugin-sql';
+
+export async function vacuumDatabase() {
+    const sqlite = await Database.load('sqlite:container-kit.db');
+    try {
+        await sqlite.execute('VACUUM');
+    } finally {
+        await sqlite.close();
+    }
+}
+
+export async function analyzeTables() {
+    const sqlite = await Database.load('sqlite:container-kit.db');
+    try {
+        await sqlite.execute('ANALYZE');
+    } finally {
+        await sqlite.close();
+    }
+}
+```
+
+<Note>
+Run `VACUUM` periodically to reclaim space and `ANALYZE` to update query planner statistics.
+</Note>
+
+## Build Optimizations
+
+### Vite Configuration
+
+```typescript vite.config.ts
+import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+
+export default defineConfig({
+    plugins: [svelte()],
+    build: {
+        minify: 'esbuild',
+        target: 'esnext',
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    // Split vendor code
+                    vendor: ['svelte', '@tauri-apps/api'],
+                    terminal: ['@xterm/xterm', '@battlefieldduck/xterm-svelte']
+                }
+            }
+        }
+    }
+});
+```
+
+### Rust Release Builds
+
+```toml Cargo.toml
+[profile.release]
+opt-level = 3          # Maximum optimization
+lto = true             # Link-time optimization
+codegen-units = 1      # Better optimization, slower compile
+strip = true           # Remove debug symbols
+panic = 'abort'        # Smaller binary size
+```
+
+### Bundle Size
+
+<CardGroup cols={2}>
+  <Card title="Code Splitting" icon="scissors">
+    Vite automatically splits code by route and dynamic imports.
+  </Card>
+  
+  <Card title="Tree Shaking" icon="tree">
+    Removes unused code during build.
+  </Card>
+  
+  <Card title="Asset Optimization" icon="image">
+    Compress images and use modern formats (WebP, AVIF).
+  </Card>
+  
+  <Card title="Lazy Loading" icon="clock">
+    Load non-critical components on demand.
+  </Card>
+</CardGroup>
+
+## Memory Management
+
+### Frontend Memory
+
+```typescript
+import { onDestroy } from 'svelte';
+
+let unsubscribe: (() => void) | null = null;
+
+// Subscribe to store
+unsubscribe = someStore.subscribe(value => {
+    // Handle updates
+});
+
+// Clean up on component destroy
+onDestroy(() => {
+    unsubscribe?.();
+});
+```
+
+### Rust Memory
+
+Rust's ownership model prevents memory leaks automatically:
+
+```rust
+#[tauri::command]
+pub async fn process_large_data(data: Vec<u8>) -> Result<String, String> {
+    // `data` is automatically freed when function returns
+    let result = expensive_operation(data);
+    Ok(result)
+} // `result` is moved to caller, no copy
+```
+
+## Monitoring Performance
+
+### Frontend Profiling
+
+```typescript
+const startTime = performance.now();
+
+await loadContainers();
+
+const endTime = performance.now();
+console.log(`Loaded containers in ${endTime - startTime}ms`);
+```
+
+### Backend Logging
+
+Enable verbose logging in development:
+
+```rust
+#[tauri::command]
+pub async fn expensive_operation() -> Result<(), String> {
+    let start = std::time::Instant::now();
+    
+    // Do work
+    
+    eprintln!("Operation took {:?}", start.elapsed());
+    Ok(())
+}
+```
+
+### Database Query Analysis
+
+Drizzle's logger shows query execution:
+
+```typescript
+export const db = drizzle<typeof schema>(
+    // ...
+    { schema: schema, logger: true } // Enable query logging
+);
+```
+
+## Performance Checklist
+
+<Accordion title="Frontend">
+  - [ ] Use keyed each blocks for lists
+  - [ ] Lazy load heavy components
+  - [ ] Cache API responses
+  - [ ] Debounce user input
+  - [ ] Use `$effect` sparingly
+  - [ ] Minimize store subscriptions
+  - [ ] Optimize images (WebP, lazy loading)
+</Accordion>
+
+<Accordion title="Backend">
+  - [ ] Use async/await for I/O
+  - [ ] Spawn blocking operations
+  - [ ] Stream large responses
+  - [ ] Validate input efficiently
+  - [ ] Use `unwrap_or` instead of `unwrap`
+  - [ ] Profile with `cargo flamegraph`
+</Accordion>
+
+<Accordion title="Database">
+  - [ ] Add indexes to queried columns
+  - [ ] Use batch operations
+  - [ ] Close connections in finally blocks
+  - [ ] Run VACUUM periodically
+  - [ ] Use transactions for multiple operations
+  - [ ] Select only needed columns
+</Accordion>
+
+<Accordion title="Build">
+  - [ ] Enable LTO for release builds
+  - [ ] Split vendor chunks
+  - [ ] Minify JavaScript
+  - [ ] Compress assets
+  - [ ] Use production Tauri configuration
+  - [ ] Strip debug symbols
+</Accordion>
+
+## Benchmarking
+
+### Container Operation Benchmark
+
+```typescript
+const operations = [
+    { name: 'List Containers', fn: getAllContainers },
+    { name: 'Start Container', fn: () => startContainer('test-id') },
+    { name: 'Stop Container', fn: () => stopContainer('test-id') }
+];
+
+for (const op of operations) {
+    const start = performance.now();
+    await op.fn();
+    const duration = performance.now() - start;
+    console.log(`${op.name}: ${duration.toFixed(2)}ms`);
+}
+```
+
+### Expected Performance
+
+| Operation | Expected Time |
+|-----------|---------------|
+| List containers | < 100ms |
+| Start/stop container | < 500ms |
+| Database query | < 10ms |
+| UI render | < 16ms (60fps) |
+| App startup | < 2s |
+
+## Performance Tips
+
+<CardGroup cols={2}>
+  <Card title="Profile First" icon="chart-line">
+    Always measure before optimizing. Use Chrome DevTools and Rust profilers.
+  </Card>
+  
+  <Card title="Optimize Bottlenecks" icon="bottle-water">
+    Focus on the slowest operations that impact user experience.
+  </Card>
+  
+  <Card title="Lazy Loading" icon="clock">
+    Defer loading non-critical resources until needed.
+  </Card>
+  
+  <Card title="Caching" icon="database">
+    Cache expensive computations and API responses.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/advanced/architecture">
+    Learn about the overall application architecture
+  </Card>
+  <Card title="Security" icon="shield" href="/advanced/security">
+    Understand security features and best practices
+  </Card>
+</CardGroup>

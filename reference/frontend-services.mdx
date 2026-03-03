@@ -1,0 +1,475 @@
+---
+title: Frontend Services
+description: TypeScript service layer API reference
+---
+
+The frontend services provide a type-safe abstraction layer over Tauri commands and the container CLI, organized by functionality.
+
+## Service Organization
+
+Services are located in `src/lib/services/` and organized into modules:
+
+- `containerization/` - Container, image, network, and system operations
+- `sqlite/` - Database operations
+- `fs-events/` - File system event watchers
+- `tray/` - System tray menu management
+
+## Container Services
+
+### Container Management
+
+Location: `src/lib/services/containerization/containers.ts`
+
+#### getAllContainers
+
+Retrieve all containers (running and stopped).
+
+```typescript
+async function getAllContainers(): Promise<Output>
+```
+
+<ResponseField name="Output" type="object">
+  <ParamField path="error" type="boolean">
+    Whether the operation failed
+  </ParamField>
+  
+  <ParamField path="stderr" type="string">
+    Error output from the command
+  </ParamField>
+  
+  <ParamField path="stdout" type="string">
+    JSON array of container objects
+  </ParamField>
+</ResponseField>
+
+#### startContainer
+
+Start a stopped container.
+
+```typescript
+async function startContainer(id: string): Promise<Output>
+```
+
+<ParamField path="id" type="string" required>
+  Container ID or name
+</ParamField>
+
+#### stopContainer
+
+Stop a running container.
+
+```typescript
+async function stopContainer(id: string): Promise<Output>
+```
+
+<ParamField path="id" type="string" required>
+  Container ID or name
+</ParamField>
+
+#### removeContainer
+
+Delete a container.
+
+```typescript
+async function removeContainer(id: string): Promise<Output>
+```
+
+<ParamField path="id" type="string" required>
+  Container ID or name to remove
+</ParamField>
+
+#### inspectContainer
+
+Get detailed container information.
+
+```typescript
+async function inspectContainer(id: string): Promise<Output>
+```
+
+<ParamField path="id" type="string" required>
+  Container ID or name
+</ParamField>
+
+<ResponseField name="Output.stdout" type="string">
+  JSON object containing detailed container configuration and state
+</ResponseField>
+
+#### getContainerLogs
+
+Retrieve container logs.
+
+```typescript
+async function getContainerLogs(id: string): Promise<Output>
+```
+
+<ParamField path="id" type="string" required>
+  Container ID or name
+</ParamField>
+
+## Image Services
+
+Location: `src/lib/services/containerization/images.ts`
+
+#### getAllImages
+
+List all container images.
+
+```typescript
+async function getAllImages(): Promise<Output>
+```
+
+<ResponseField name="Output.stdout" type="string">
+  JSON array of image objects with tags, IDs, and sizes
+</ResponseField>
+
+#### pullImage
+
+Pull an image from a registry.
+
+```typescript
+async function pullImage(imageDetails: Array<string>): Promise<Output>
+```
+
+<ParamField path="imageDetails" type="Array<string>" required>
+  Array of image details (e.g., `['nginx:latest']` or `['--platform', 'linux/amd64', 'nginx']`)
+</ParamField>
+
+#### createPullImageCommand
+
+Create a pull command without executing it (useful for custom execution).
+
+```typescript
+function createPullImageCommand(imageDetails: Array<string>): Command<string>
+```
+
+<ParamField path="imageDetails" type="Array<string>" required>
+  Array of image details and options
+</ParamField>
+
+<ResponseField name="Command" type="Command<string>">
+  Tauri Command object that can be executed or streamed
+</ResponseField>
+
+#### removeImage
+
+Remove a single image.
+
+```typescript
+async function removeImage(imageReference: string): Promise<Output>
+```
+
+<ParamField path="imageReference" type="string" required>
+  Image name, ID, or digest
+</ParamField>
+
+#### removeMultipleImages
+
+Remove multiple images in a single operation.
+
+```typescript
+async function removeMultipleImages(imagesReference: Array<string>): Promise<Output>
+```
+
+<ParamField path="imagesReference" type="Array<string>" required>
+  Array of image references to remove
+</ParamField>
+
+#### inspectImage
+
+Get detailed image information.
+
+```typescript
+async function inspectImage(imageReference: string): Promise<Output>
+```
+
+<ParamField path="imageReference" type="string" required>
+  Image name, ID, or digest
+</ParamField>
+
+<ResponseField name="Output.stdout" type="string">
+  JSON object with image layers, configuration, and metadata
+</ResponseField>
+
+#### importImageFromTar
+
+Import an image from a tar archive.
+
+```typescript
+async function importImageFromTar(path: string): Promise<Output>
+```
+
+<ParamField path="path" type="string" required>
+  Absolute path to the tar file
+</ParamField>
+
+#### exportImageToTar
+
+Export an image to a tar archive.
+
+```typescript
+async function exportImageToTar(
+  imageReference: string,
+  path: string,
+  additionalOptions?: string[]
+): Promise<Output>
+```
+
+<ParamField path="imageReference" type="string" required>
+  Image to export
+</ParamField>
+
+<ParamField path="path" type="string" required>
+  Destination path for the tar file
+</ParamField>
+
+<ParamField path="additionalOptions" type="string[]">
+  Optional flags (e.g., `['--arch', 'aarch64']`)
+</ParamField>
+
+## System Services
+
+Location: `src/lib/services/containerization/system/service.ts`
+
+#### startContainerization
+
+Start the container service.
+
+```typescript
+async function startContainerization(): Promise<Output>
+```
+
+#### stopContainerization
+
+Stop the container service.
+
+```typescript
+async function stopContainerization(): Promise<Output>
+```
+
+#### containerizationStatus
+
+Check if the container service is running.
+
+```typescript
+async function containerizationStatus(): Promise<Output>
+```
+
+<ResponseField name="Output.stdout" type="string">
+  Service status information
+</ResponseField>
+
+## Setup Services
+
+Location: `src/lib/services/containerization/setup.ts`
+
+#### hasContainerCli
+
+Check if the container CLI is available.
+
+```typescript
+async function hasContainerCli(): Promise<boolean>
+```
+
+<ResponseField name="result" type="boolean">
+  `true` if the container command is available, `false` otherwise
+</ResponseField>
+
+#### createSymlink
+
+Create symlinks for container binaries with elevated privileges.
+
+```typescript
+async function createSymlink(): Promise<Output>
+```
+
+Creates symlinks for:
+- Container binaries → `/usr/local/bin/container`
+- Container API server → `/usr/local/bin/container-api`
+- Libexec directory → `/usr/local/libexec`
+
+## DNS Services
+
+Location: `src/lib/services/containerization/dns.ts`
+
+#### createDns
+
+Create a DNS entry for container networking.
+
+```typescript
+async function createDns(domain: string): Promise<Output>
+```
+
+<ParamField path="domain" type="string" required>
+  Domain name to create (e.g., "example.local")
+</ParamField>
+
+#### getAllDnsConfig
+
+List all DNS configurations.
+
+```typescript
+async function getAllDnsConfig(): Promise<Output>
+```
+
+<ResponseField name="Output.stdout" type="string">
+  Space-separated list of DNS entries
+</ResponseField>
+
+## Registry Services
+
+Location: `src/lib/services/containerization/registry/auth.ts`
+
+#### registryLogin
+
+Authenticate with a container registry.
+
+```typescript
+async function registryLogin(options: RegistryLoginParams): Promise<Output>
+```
+
+<ParamField path="options" type="RegistryLoginParams" required>
+  <ParamField path="username" type="string" required>
+    Registry username
+  </ParamField>
+  
+  <ParamField path="password" type="string" required>
+    Registry password
+  </ParamField>
+  
+  <ParamField path="registry" type="string" required>
+    Registry URL (e.g., "docker.io", "ghcr.io")
+  </ParamField>
+  
+  <ParamField path="scheme" type="string">
+    Authentication scheme (defaults to "auto")
+  </ParamField>
+</ParamField>
+
+#### registryLogout
+
+Log out from a container registry.
+
+```typescript
+async function registryLogout(options: RegistryLogoutParams): Promise<Output>
+```
+
+<ParamField path="options" type="RegistryLogoutParams" required>
+  <ParamField path="registry" type="string" required>
+    Registry URL to logout from
+  </ParamField>
+</ParamField>
+
+## Database Services
+
+Location: `src/lib/services/sqlite/registry.ts`
+
+#### addRegistry
+
+Add a container registry to the database.
+
+```typescript
+async function addRegistry(registryData: InsertRegistry): Promise<void>
+```
+
+<ParamField path="registryData" type="InsertRegistry" required>
+  <ParamField path="name" type="string" required>
+    Display name for the registry
+  </ParamField>
+  
+  <ParamField path="url" type="string" required>
+    Registry URL (must be unique)
+  </ParamField>
+  
+  <ParamField path="loggedIn" type="boolean">
+    Whether the user is currently logged in (defaults to false)
+  </ParamField>
+</ParamField>
+
+## Utility Functions
+
+Location: `src/lib/services/containerization/utils.ts`
+
+#### createContainerCommand
+
+Create a container CLI command.
+
+```typescript
+function createContainerCommand(args: string[]): Command<string>
+```
+
+<ParamField path="args" type="string[]" required>
+  Command arguments
+</ParamField>
+
+<ResponseField name="Command" type="Command<string>">
+  Tauri shell Command instance
+</ResponseField>
+
+#### validateCommandOutput
+
+Validate and normalize command output.
+
+```typescript
+function validateCommandOutput(output: ChildProcess<string>): Output
+```
+
+<ParamField path="output" type="ChildProcess<string>" required>
+  Raw output from Tauri shell command
+</ParamField>
+
+<ResponseField name="Output" type="object">
+  <ParamField path="error" type="boolean">
+    `true` if the command failed (null exit code or empty stdout)
+  </ParamField>
+  
+  <ParamField path="stderr" type="string">
+    Error output
+  </ParamField>
+  
+  <ParamField path="stdout" type="string">
+    Standard output
+  </ParamField>
+</ResponseField>
+
+## Type Definitions
+
+### Output
+
+Standard output format for all service operations.
+
+```typescript
+type Output = {
+  error: boolean;
+  stderr: string;
+  stdout: string;
+};
+```
+
+### RegistryLoginParams
+
+```typescript
+type RegistryLoginParams = {
+  username: string;
+  password: string;
+  registry: string;
+  scheme?: string;
+};
+```
+
+### RegistryLogoutParams
+
+```typescript
+type RegistryLogoutParams = {
+  registry: string;
+};
+```
+
+### InsertRegistry
+
+```typescript
+type InsertRegistry = {
+  name: string;
+  url: string;
+  loggedIn?: boolean;
+};
+```

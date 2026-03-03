@@ -1,0 +1,461 @@
+---
+title: Project Structure
+description: Understand the organization and architecture of the Container Kit codebase.
+---
+
+Container Kit follows a modern, modular architecture with clear separation between frontend and backend concerns.
+
+## Directory Overview
+
+```
+ContainerKit/
+├── src/                          # Svelte frontend
+│   ├── lib/
+│   │   ├── components/          # UI components (atomic design)
+│   │   │   ├── ui/              # Base UI components
+│   │   │   ├── atoms/           # Atomic components
+│   │   │   ├── molecules/       # Composed components
+│   │   │   ├── organisms/       # Complex components
+│   │   │   └── pages/           # Page-level components
+│   │   ├── db/                  # Database schema and types
+│   │   │   ├── schema.ts        # Drizzle schema definitions
+│   │   │   └── types.ts         # TypeScript type definitions
+│   │   ├── services/            # API and business logic
+│   │   │   ├── container.ts     # Container management
+│   │   │   └── system.ts        # System integration
+│   │   ├── stores/              # Svelte stores
+│   │   │   ├── app.ts           # Application state
+│   │   │   └── theme.ts         # Theme management
+│   │   ├── schemas/             # Validation schemas
+│   │   ├── helpers/             # Helper utilities
+│   │   ├── hooks/               # Svelte hooks
+│   │   ├── models/              # Data models
+│   │   └── actions/             # Svelte actions
+│   ├── routes/                  # SvelteKit routes
+│   │   ├── (containerization)/  # Container routes
+│   │   ├── (fallback)/          # Fallback routes
+│   │   └── +layout.svelte       # Root layout
+│   ├── themes/                  # Custom CSS themes
+│   └── app.html                 # HTML template
+├── src-tauri/                   # Rust/Tauri backend
+│   ├── src/
+│   │   ├── commands/            # Tauri commands (IPC)
+│   │   ├── services/            # Business logic
+│   │   └── main.rs              # Application entry point
+│   ├── migrations/              # SQL migration files
+│   ├── binaries/                # Sidecar binaries
+│   │   └── sidecar/             # Apple Container CLI
+│   ├── capabilities/            # Tauri capabilities
+│   ├── icons/                   # Application icons
+│   ├── tauri.conf.json         # Tauri configuration
+│   └── Cargo.toml              # Rust dependencies
+├── scripts/                     # Build and automation scripts
+│   ├── docs/                    # Script documentation
+│   ├── download-apple-container-cli.sh  # CLI downloader
+│   └── generate-migrations.ts   # Migration generator
+├── static/                      # Static assets
+│   ├── logo.png                 # Application logo
+│   └── preview/                 # Screenshots
+├── .zed/                        # Zed editor settings
+├── .vscode/                     # VS Code settings
+├── package.json                 # Node.js dependencies
+├── pnpm-lock.yaml              # Dependency lock file
+├── svelte.config.js            # SvelteKit configuration
+├── vite.config.js              # Vite configuration
+├── tsconfig.json               # TypeScript configuration
+├── drizzle.config.ts           # Drizzle ORM configuration
+└── tailwind.config.js          # Tailwind CSS configuration
+```
+
+## Frontend Architecture
+
+### Component Structure
+
+Container Kit follows **Atomic Design** principles:
+
+#### Atoms (`src/lib/components/atoms/`)
+
+Smallest, reusable UI elements:
+
+- Buttons, inputs, labels
+- Icons, badges
+- Basic terminal components
+- Data table cells
+
+#### Molecules (`src/lib/components/molecules/`)
+
+Composed components made of atoms:
+
+- Delete confirmation dialogs
+- Terminal headers and footers
+- Tooltip components
+- Page footer actions
+
+#### Organisms (`src/lib/components/organisms/`)
+
+Complex components with business logic:
+
+- Sidebar navigation (`app-sidebar.svelte`)
+- Theme switcher
+- Toolbar
+- Site header
+
+#### Pages (`src/lib/components/pages/`)
+
+Full page components:
+
+- Home dashboard
+- Containerization status
+- Unsupported system pages
+
+#### UI Components (`src/lib/components/ui/`)
+
+Shadcn-style base components:
+
+- Alert, Alert Dialog
+- Badge, Button, Card
+- Checkbox, Dialog, Dropdown Menu
+- Input, Label, Select
+- Table, Tabs, Toast
+- And more...
+
+### Services Layer
+
+#### `src/lib/services/`
+
+Business logic and API integration:
+
+- **`container.ts`** - Container management operations
+- **`system.ts`** - System integration and platform checks
+
+### State Management
+
+#### `src/lib/stores/`
+
+Svelte stores for global state:
+
+- **`app.ts`** - Application-wide state
+- **`theme.ts`** - Theme preferences and switching
+
+### Database Layer
+
+#### `src/lib/db/`
+
+Database schema and types:
+
+- **`schema.ts`** - Drizzle ORM schema definitions
+- **`types.ts`** - TypeScript type definitions for database entities
+
+### Routing
+
+#### `src/routes/`
+
+SvelteKit file-based routing:
+
+- **`(containerization)/`** - Container management routes (grouped)
+- **`(fallback)/`** - Fallback and error routes
+- **`+layout.svelte`** - Root layout component
+- **`+page.svelte`** - Home page
+
+### Theming
+
+#### `src/themes/`
+
+Custom CSS themes:
+
+- CSS variables for colors
+- Dark/light mode definitions
+- Custom styling overrides
+
+## Backend Architecture
+
+### Tauri Backend (`src-tauri/`)
+
+#### Commands (`src-tauri/src/commands/`)
+
+Tauri IPC commands for frontend-backend communication:
+
+```rust
+#[tauri::command]
+pub async fn get_container_info(id: String) -> Result<ContainerInfo> {
+    // Implementation
+}
+```
+
+#### Services (`src-tauri/src/services/`)
+
+Business logic layer:
+
+- Container operations
+- System integration
+- Database queries
+
+#### Main Entry Point (`src-tauri/src/main.rs`)
+
+Application initialization:
+
+```rust
+fn main() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_sql::Builder::default().build())
+        .invoke_handler(tauri::generate_handler![/* commands */])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+### Database Migrations
+
+#### `src-tauri/migrations/`
+
+Generated SQL migration files:
+
+- Versioned schema changes
+- Generated by Drizzle Kit
+- Converted to Rust by `generate-migrations.ts`
+
+### Sidecar Binaries
+
+#### `src-tauri/binaries/sidecar/`
+
+Bundled external binaries:
+
+- Apple Container CLI
+- Downloaded by `download-apple-container-cli.sh`
+
+### Configuration
+
+#### `src-tauri/tauri.conf.json`
+
+Tauri application configuration:
+
+```json
+{
+  "productName": "Container Kit",
+  "version": "0.10.0",
+  "identifier": "io.ethercorps.containerkit",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devPath": "http://localhost:5173",
+    "distDir": "../build"
+  }
+}
+```
+
+## Build System
+
+### Scripts (`scripts/`)
+
+Automation and build scripts:
+
+#### `download-apple-container-cli.sh`
+
+Downloads Apple Container CLI for macOS:
+
+```bash
+#!/bin/bash
+# Downloads and extracts Apple Container CLI
+# Places it in src-tauri/binaries/sidecar/
+```
+
+#### `generate-migrations.ts`
+
+Generates Rust migration bindings from SQL:
+
+```typescript
+// Reads SQL migrations from src-tauri/migrations/
+// Generates Rust code for embedding migrations
+```
+
+#### `tauri-build.sh`
+
+Custom build script for production:
+
+```bash
+#!/bin/bash
+# Runs database generation
+# Builds Tauri app for Apple Silicon
+```
+
+### Package Management
+
+#### `package.json`
+
+Node.js dependencies and scripts:
+
+- Frontend dependencies (Svelte, TypeScript, etc.)
+- Development tools (Vite, Prettier, etc.)
+- Build scripts and automation
+
+#### `Cargo.toml`
+
+Rust dependencies:
+
+- Tauri framework
+- Database drivers
+- Serialization libraries
+
+## Configuration Files
+
+### TypeScript (`tsconfig.json`)
+
+```json
+{
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "moduleResolution": "bundler"
+  }
+}
+```
+
+### SvelteKit (`svelte.config.js`)
+
+```javascript
+import adapter from '@sveltejs/adapter-static';
+
+export default {
+  kit: {
+    adapter: adapter({
+      fallback: 'index.html'
+    })
+  }
+};
+```
+
+### Vite (`vite.config.js`)
+
+```javascript
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [sveltekit()],
+  clearScreen: false,
+  server: {
+    port: 5173,
+    strictPort: true
+  }
+});
+```
+
+### Drizzle (`drizzle.config.ts`)
+
+```typescript
+import type { Config } from 'drizzle-kit';
+
+export default {
+  schema: './src/lib/db/schema.ts',
+  out: './src-tauri/migrations',
+  dialect: 'sqlite'
+} satisfies Config;
+```
+
+## Development Patterns
+
+### Frontend Patterns
+
+#### Component Communication
+
+```svelte
+<!-- Parent -->
+<ChildComponent bind:value on:change={handleChange} />
+
+<!-- Child -->
+<script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+  const dispatch = createEventDispatcher();
+  
+  let { value = $bindable() } = $props();
+</script>
+```
+
+#### Store Usage
+
+```typescript
+// store.ts
+import { writable } from 'svelte/store';
+
+export const theme = writable<'light' | 'dark'>('light');
+
+// component.svelte
+import { theme } from '$lib/stores/theme';
+```
+
+#### Service Integration
+
+```typescript
+// service.ts
+export async function getContainers() {
+  return await invoke<Container[]>('get_containers');
+}
+
+// component.svelte
+import { getContainers } from '$lib/services/container';
+const containers = await getContainers();
+```
+
+### Backend Patterns
+
+#### Command Definition
+
+```rust
+#[tauri::command]
+pub async fn create_container(
+    name: String,
+    config: ContainerConfig
+) -> Result<Container, String> {
+    // Implementation
+}
+```
+
+#### Database Access
+
+```rust
+use tauri_plugin_sql::TauriSql;
+
+let result = app
+    .sql()
+    .execute("SELECT * FROM containers WHERE id = ?", &[&id])
+    .await?;
+```
+
+## Testing Structure
+
+<Note>
+  Testing infrastructure is planned but not yet implemented.
+</Note>
+
+### Planned Structure
+
+```
+tests/
+├── unit/
+│   ├── frontend/
+│   └── backend/
+├── integration/
+│   ├── e2e/
+│   └── api/
+└── fixtures/
+```
+
+## Build Artifacts
+
+### Development
+
+- `.svelte-kit/` - SvelteKit build cache
+- `build/` - Frontend build output
+- `target/` - Rust build artifacts
+
+### Production
+
+- `src-tauri/target/release/` - Compiled Rust binary
+- `src-tauri/target/release/bundle/` - macOS app bundle
+- `*.dmg` - Distributable installer
+
+## Next Steps
+
+- Review [Available Scripts](/development/scripts) for development commands
+- Check [Contributing Guide](/development/contributing) for coding standards
+- Set up your [Development Environment](/development/setup)

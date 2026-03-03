@@ -1,0 +1,626 @@
+---
+title: Available Scripts
+description: Comprehensive guide to all npm/pnpm scripts available in Container Kit.
+---
+
+This guide provides detailed documentation for all available scripts in the Container Kit project.
+
+## Core Development Scripts
+
+<Warning>
+  **DO NOT CHANGE** - These are the primary development commands used by the team.
+</Warning>
+
+### Development Server
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm dev
+  ```
+
+  ```bash npm
+  npm run dev
+  ```
+
+  ```bash yarn
+  yarn dev
+  ```
+</CodeGroup>
+
+Starts the Vite development server with hot module replacement (HMR).
+
+- Runs on `http://localhost:5173`
+- Auto-reloads on file changes
+- TypeScript type checking in watch mode
+
+### Tauri Development
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm tauri dev
+  ```
+
+  ```bash npm
+  npm run tauri dev
+  ```
+
+  ```bash yarn
+  yarn tauri dev
+  ```
+</CodeGroup>
+
+Starts the Tauri application in development mode:
+
+- Launches desktop app with webview
+- Hot reload for frontend code
+- Rust compilation on backend changes
+- Full access to system APIs
+
+### Production Build
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm tauri:build
+  ```
+
+  ```bash npm
+  npm run tauri:build
+  ```
+
+  ```bash yarn
+  yarn tauri:build
+  ```
+</CodeGroup>
+
+Builds the application for production (Apple Silicon):
+
+- Generates optimized frontend bundle
+- Compiles Rust backend
+- Creates macOS app bundle (`.app`)
+- Generates distributable installer (`.dmg`)
+- Target: `aarch64-apple-darwin`
+
+<Note>
+  This script automatically runs `pnpm db:generate` before building to ensure migrations are up to date.
+</Note>
+
+### Test Build
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm build
+  ```
+
+  ```bash npm
+  npm run build
+  ```
+
+  ```bash yarn
+  yarn build
+  ```
+</CodeGroup>
+
+Builds the frontend for testing:
+
+- Runs `pnpm db:generate` first
+- Creates production frontend bundle
+- Output: `build/` directory
+- Does not create app bundle
+
+## Code Quality Scripts
+
+### Type Checking
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm check
+  ```
+
+  ```bash npm
+  npm run check
+  ```
+
+  ```bash yarn
+  yarn check
+  ```
+</CodeGroup>
+
+Runs Svelte type checking:
+
+- Validates TypeScript types
+- Checks Svelte component types
+- Reports type errors
+
+### Watch Mode Type Checking
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm check:watch
+  ```
+
+  ```bash npm
+  npm run check:watch
+  ```
+
+  ```bash yarn
+  yarn check:watch
+  ```
+</CodeGroup>
+
+Runs type checking in watch mode:
+
+- Continuous type validation
+- Auto-checks on file changes
+- Useful during active development
+
+### Code Formatting
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm format
+  ```
+
+  ```bash npm
+  npm run format
+  ```
+
+  ```bash yarn
+  yarn format
+  ```
+</CodeGroup>
+
+Formats all code with Prettier:
+
+- Formats TypeScript, JavaScript, Svelte files
+- Formats JSON, YAML, Markdown files
+- Auto-fixes formatting issues
+- Writes changes to files
+
+### Linting
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm lint
+  ```
+
+  ```bash npm
+  npm run lint
+  ```
+
+  ```bash yarn
+  yarn lint
+  ```
+</CodeGroup>
+
+Checks code formatting without making changes:
+
+- Validates Prettier formatting
+- Reports formatting violations
+- Does not auto-fix (use `format` to fix)
+- Useful in CI/CD pipelines
+
+## Database Scripts
+
+### Generate Migrations
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm db:generate
+  ```
+
+  ```bash npm
+  npm run db:generate
+  ```
+
+  ```bash yarn
+  yarn db:generate
+  ```
+</CodeGroup>
+
+Generates database migrations and Rust bindings:
+
+1. Runs `drizzle-kit generate` to create SQL migrations
+2. Runs `pnpm db:migrations:rust` to generate Rust bindings
+3. Outputs migrations to `src-tauri/migrations/`
+
+**When to use:**
+- After changing `src/lib/db/schema.ts`
+- Before building for production
+- When database schema is out of sync
+
+### Generate Rust Migration Bindings
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm db:migrations:rust
+  ```
+
+  ```bash npm
+  npm run db:migrations:rust
+  ```
+
+  ```bash yarn
+  yarn db:migrations:rust
+  ```
+</CodeGroup>
+
+Generates only Rust migration bindings:
+
+- Reads SQL from `src-tauri/migrations/`
+- Generates Rust code for embedding migrations
+- Used internally by `db:generate`
+
+## Shell Scripts
+
+### Download Apple Container CLI
+
+```bash
+./scripts/download-apple-container-cli.sh
+```
+
+Downloads and extracts Apple Container CLI:
+
+- Downloads from official Apple source
+- Extracts to `src-tauri/binaries/sidecar/`
+- Required for container management features
+- macOS only
+
+**Or via pnpm:**
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm script:download-apple-container
+  ```
+
+  ```bash npm
+  npm run script:download-apple-container
+  ```
+
+  ```bash yarn
+  yarn script:download-apple-container
+  ```
+</CodeGroup>
+
+### Create Container Symlink
+
+```bash
+./scripts/symlink.sh
+```
+
+Creates symlink for container CLI (if needed).
+
+**Or via pnpm:**
+
+<CodeGroup>
+  ```bash pnpm
+  pnpm script:container-symlink
+  ```
+
+  ```bash npm
+  npm run script:container-symlink
+  ```
+
+  ```bash yarn
+  yarn script:container-symlink
+  ```
+</CodeGroup>
+
+## Common Workflows
+
+### Initial Setup
+
+<Steps>
+  <Step title="Install Dependencies">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm install
+      ```
+
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Generate Database Migrations">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm db:generate
+      ```
+
+      ```bash npm
+      npm run db:generate
+      ```
+
+      ```bash yarn
+      yarn db:generate
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Download Apple Container CLI">
+    ```bash
+    ./scripts/download-apple-container-cli.sh
+    ```
+  </Step>
+</Steps>
+
+### Daily Development
+
+<CodeGroup>
+  ```bash pnpm
+  # Start development server
+  pnpm tauri dev
+  ```
+
+  ```bash npm
+  npm run dev
+  ```
+
+  ```bash yarn
+  yarn dev
+  ```
+</CodeGroup>
+
+### Schema Changes
+
+<Steps>
+  <Step title="Update Schema">
+    Edit `src/lib/db/schema.ts` with your changes.
+  </Step>
+
+  <Step title="Generate Migrations">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm db:generate
+      ```
+
+      ```bash npm
+      npm run db:generate
+      ```
+
+      ```bash yarn
+      yarn db:generate
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Build Application">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm tauri:build
+      ```
+
+      ```bash npm
+      npm run tauri:build
+      ```
+
+      ```bash yarn
+      yarn tauri:build
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+### Pre-Commit Workflow
+
+<Steps>
+  <Step title="Format Code">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm format
+      ```
+
+      ```bash npm
+      npm run format
+      ```
+
+      ```bash yarn
+      yarn format
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Check Formatting">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm lint
+      ```
+
+      ```bash npm
+      npm run lint
+      ```
+
+      ```bash yarn
+      yarn lint
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Type Check">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm check
+      ```
+
+      ```bash npm
+      npm run check
+      ```
+
+      ```bash yarn
+      yarn check
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+### Production Build
+
+<Steps>
+  <Step title="Clean Build">
+    ```bash
+    rm -rf node_modules .svelte-kit build
+    pnpm install
+    ```
+  </Step>
+
+  <Step title="Build Application">
+    <CodeGroup>
+      ```bash pnpm
+      pnpm tauri:build
+      ```
+
+      ```bash npm
+      npm run tauri:build
+      ```
+
+      ```bash yarn
+      yarn tauri:build
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Build Issues
+
+<CodeGroup>
+  ```bash Clean and Rebuild
+  # Remove build artifacts
+  rm -rf node_modules .svelte-kit build
+  
+  # Reinstall dependencies
+  pnpm install
+  
+  # Rebuild
+  pnpm tauri:build
+  ```
+
+  ```bash Check Tauri Setup
+  # Verify Tauri configuration
+  pnpm tauri info
+  ```
+</CodeGroup>
+
+### Database Issues
+
+<CodeGroup>
+  ```bash pnpm
+  # Regenerate migrations
+  pnpm db:generate
+  ```
+
+  ```bash npm
+  npm run db:generate
+  ```
+
+  ```bash yarn
+  yarn db:generate
+  ```
+</CodeGroup>
+
+### Type Errors
+
+<CodeGroup>
+  ```bash pnpm
+  # Run type checking
+  pnpm check
+  
+  # Or in watch mode
+  pnpm check:watch
+  ```
+
+  ```bash npm
+  npm run check
+  npm run check:watch
+  ```
+
+  ```bash yarn
+  yarn check
+  yarn check:watch
+  ```
+</CodeGroup>
+
+## Environment Variables
+
+### Tauri Build Signing
+
+For signed production builds, create a `.env` file:
+
+```bash
+# .env
+TAURI_SIGNING_PRIVATE_KEY=your_key_here
+TAURI_SIGNING_PRIVATE_KEY_PASSWORD=your_password_here
+```
+
+<Note>
+  Signing keys are only required for production builds. Development builds do not require signing.
+</Note>
+
+## Script Categories
+
+### Core Development
+- `dev` - Vite development server
+- `tauri dev` - Tauri development mode
+- `tauri:build` - Production build
+
+### Code Quality
+- `check` - Type checking
+- `check:watch` - Type checking in watch mode
+- `format` - Format code
+- `lint` - Check formatting
+
+### Database
+- `db:generate` - Generate migrations + Rust bindings
+- `db:migrations:rust` - Generate Rust bindings only
+
+### Shell Scripts
+- `script:download-apple-container` - Download Apple CLI
+- `script:container-symlink` - Create container symlink
+
+## Tips
+
+<Tip>
+  **Build includes migrations** - `pnpm tauri:build` automatically runs `pnpm db:generate` before building.
+</Tip>
+
+<Tip>
+  **Format before commits** - Always run `pnpm format` before committing to maintain code consistency.
+</Tip>
+
+<Tip>
+  **Use watch mode** - Run `pnpm check:watch` for continuous type checking during development.
+</Tip>
+
+<Tip>
+  **Apple Silicon only** - `tauri:build` targets `aarch64-apple-darwin` by default (Apple Silicon Macs).
+</Tip>
+
+## Additional Resources
+
+- [Project Structure](/development/project-structure) - Understand the codebase
+- [Contributing Guide](/development/contributing) - Coding standards and workflow
+- [Development Setup](/development/setup) - Environment setup instructions
+
+## Script Reference
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `dev` | `vite dev` | Start Vite development server |
+| `build` | `pnpm db:generate && vite build` | Build frontend for testing |
+| `preview` | `vite preview` | Preview production build |
+| `tauri` | `tauri` | Tauri CLI commands |
+| `tauri:build` | `./scripts/tauri-build.sh` | Production build for Apple Silicon |
+| `check` | `svelte-kit sync && svelte-check` | Run type checking |
+| `check:watch` | `svelte-kit sync && svelte-check --watch` | Type checking in watch mode |
+| `format` | `prettier --write .` | Format code with Prettier |
+| `lint` | `prettier --check .` | Check code formatting |
+| `db:generate` | `drizzle-kit generate && pnpm db:migrations:rust` | Generate migrations + Rust bindings |
+| `db:migrations:rust` | `tsx scripts/generate-migrations.ts` | Generate Rust migration bindings |
+| `script:download-apple-container` | `./scripts/download-apple-container-cli.sh` | Download Apple Container CLI |
+| `script:container-symlink` | `./scripts/symlink.sh` | Create container symlink |

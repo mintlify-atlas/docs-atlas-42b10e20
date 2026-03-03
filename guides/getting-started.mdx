@@ -1,0 +1,318 @@
+---
+title: "Getting Started"
+description: "Complete guide to installing and setting up Container Kit on macOS"
+---
+
+## Overview
+
+Container Kit is a modern desktop application for managing Apple containers on macOS. This guide will walk you through the installation process, initial setup, and your first container operations.
+
+<Warning>
+  Container Kit requires **macOS 26.0+** and **Apple Silicon** (M1/M2/M3/M4). Intel Macs are not supported.
+</Warning>
+
+## Prerequisites
+
+Before installing Container Kit, ensure you have:
+
+- macOS 26.0 or later
+- Apple Silicon Mac (M1/M2/M3/M4)
+- Xcode Command Line Tools installed
+- Administrator access to your Mac
+
+### Install Xcode Command Line Tools
+
+If you haven't already installed the Xcode Command Line Tools, run:
+
+```bash
+xcode-select --install
+```
+
+## Installation
+
+### Option 1: Download Pre-built Release (Recommended)
+
+<Warning>
+  Pre-built releases may not be available during the development phase. Use the build from source option below if no releases are available.
+</Warning>
+
+<Steps>
+  <Step title="Download the DMG">
+    Visit the [GitHub Releases page](https://github.com/etherCorps/ContainerKit/releases) and download the latest `.dmg` file for your macOS version.
+  </Step>
+  
+  <Step title="Install the Application">
+    1. Open the downloaded `.dmg` file
+    2. Drag **Container Kit** to your **Applications** folder
+    3. Eject the disk image
+  </Step>
+  
+  <Step title="Launch Container Kit">
+    Open Container Kit from:
+    - **Applications** folder
+    - **Spotlight** (⌘ + Space, then type "Container Kit")
+    - **Terminal**: `open -a "Container Kit"`
+  </Step>
+</Steps>
+
+### Option 2: Build from Source
+
+Building from source gives you access to the latest development features.
+
+<Steps>
+  <Step title="Install Dependencies">
+    Install Node.js and pnpm:
+    
+    ```bash
+    # Install pnpm globally
+    npm install -g pnpm
+    ```
+  </Step>
+  
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/etherCorps/ContainerKit.git
+    cd ContainerKit
+    ```
+  </Step>
+  
+  <Step title="Install Project Dependencies">
+    ```bash
+    pnpm install
+    ```
+  </Step>
+  
+  <Step title="Download Apple Container CLI">
+    Container Kit requires the Apple Container CLI to function:
+    
+    ```bash
+    ./scripts/download-apple-container-cli.sh
+    ```
+    
+    This script downloads and configures the necessary Apple containerization tools.
+  </Step>
+  
+  <Step title="Build the Application">
+    ```bash
+    pnpm tauri:build
+    ```
+    
+    The built application will be located in `src-tauri/target/release/bundle/`.
+  </Step>
+</Steps>
+
+## First Launch Setup
+
+### Grant System Permissions
+
+On first launch, Container Kit requires several system permissions:
+
+<Steps>
+  <Step title="Open Container Kit">
+    Launch the application from your Applications folder.
+  </Step>
+  
+  <Step title="Allow System Access">
+    macOS will prompt you to grant permissions for:
+    - **Full Disk Access** - Required for container management
+    - **Terminal/Shell Access** - Required for executing container commands
+    
+    Click **Open System Settings** and enable the required permissions.
+  </Step>
+  
+  <Step title="Create Symbolic Links">
+    Container Kit needs to create symbolic links to the Apple Container CLI:
+    
+    1. Click **Setup Container CLI** in the welcome screen
+    2. Enter your administrator password when prompted
+    3. Wait for the setup to complete
+    
+    This process links the bundled container binaries to system paths.
+  </Step>
+  
+  <Step title="Verify Installation">
+    Container Kit will automatically verify that the containerization service is available. You should see a success message indicating the setup is complete.
+  </Step>
+</Steps>
+
+<Tip>
+  If setup fails, you can manually create symlinks by running the setup process again from **Settings** > **System** > **Reinstall Container CLI**.
+</Tip>
+
+## Start the Containerization Service
+
+The Apple containerization service must be running to manage containers.
+
+<Steps>
+  <Step title="Check Service Status">
+    Navigate to **Settings** > **System** in Container Kit to view the current service status.
+  </Step>
+  
+  <Step title="Start the Service">
+    Click **Start Containerization Service** to launch the service:
+    
+    ```typescript
+    // Under the hood, Container Kit runs:
+    import { startContainerization } from '$lib/services/containerization/system/service';
+    
+    const result = await startContainerization();
+    // Executes: container s start
+    ```
+  </Step>
+  
+  <Step title="Verify Status">
+    The service status indicator should turn green, showing "Running".
+  </Step>
+</Steps>
+
+<Warning>
+  The containerization service requires administrator privileges to start. You'll be prompted for your password.
+</Warning>
+
+## Your First Container
+
+Let's pull an image and create your first container.
+
+<Steps>
+  <Step title="Pull an Image">
+    1. Navigate to the **Images** tab
+    2. Click **Pull Image**
+    3. Enter an image name, for example: `nginx`
+    4. Click **Pull**
+    
+    Container Kit will download the image from the registry.
+  </Step>
+  
+  <Step title="View Your Images">
+    The pulled image will appear in the Images list with details like:
+    - Image name and tag
+    - Size
+    - Creation date
+  </Step>
+  
+  <Step title="Create a Container">
+    1. Navigate to the **Containers** tab
+    2. Click **New Container**
+    3. Select the `nginx` image
+    4. Configure container settings (name, ports, etc.)
+    5. Click **Create**
+  </Step>
+  
+  <Step title="Start the Container">
+    1. Find your new container in the list
+    2. Click the **Start** button
+    3. The status will change to "Running"
+  </Step>
+</Steps>
+
+## Understanding the Interface
+
+### Dashboard
+
+The main dashboard shows:
+- **Container Count** - Total, running, and stopped containers
+- **Image Count** - Total images and disk usage
+- **System Status** - Containerization service status
+- **Recent Activity** - Latest container operations
+
+### Containers Tab
+
+Manage all your containers:
+- View container list with status indicators
+- Start, stop, and remove containers
+- View container logs and details
+- Access container terminal
+
+### Images Tab
+
+Manage container images:
+- View all pulled images
+- Pull new images from registries
+- Remove unused images
+- Import/export images as tar archives
+
+### Settings
+
+Configure Container Kit:
+- **System** - Service management and CLI setup
+- **Network** - DNS and network configuration
+- **Registry** - Container registry authentication
+- **Appearance** - Theme and UI preferences
+
+## Troubleshooting First Launch
+
+<AccordionGroup>
+  <Accordion title="Container CLI not found">
+    If you see "Container CLI not found" error:
+    
+    1. Ensure you downloaded the Apple Container CLI:
+       ```bash
+       ./scripts/download-apple-container-cli.sh
+       ```
+    2. Verify the binaries exist in `src-tauri/binaries/`
+    3. Retry the symbolic link creation from Settings
+    
+    The CLI is required for all container operations.
+  </Accordion>
+  
+  <Accordion title="Permission denied errors">
+    If you encounter permission errors:
+    
+    1. Open **System Settings** > **Privacy & Security**
+    2. Grant **Full Disk Access** to Container Kit
+    3. Restart Container Kit
+    4. Try the operation again
+    
+    Some operations require administrator privileges and will prompt for your password.
+  </Accordion>
+  
+  <Accordion title="Service won't start">
+    If the containerization service fails to start:
+    
+    1. Check system requirements (macOS 26.0+, Apple Silicon)
+    2. Ensure no other container management tools are running
+    3. View service logs in Settings > System > Service Logs
+    4. Try stopping and restarting: `container s stop && container s start`
+    
+    See the [Troubleshooting guide](/guides/troubleshooting) for more solutions.
+  </Accordion>
+  
+  <Accordion title="Application won't open">
+    If Container Kit won't open:
+    
+    1. Right-click the app and select **Open** (first time only)
+    2. If prompted, click **Open** in the security dialog
+    3. Check Console.app for error messages
+    4. Ensure your macOS version is 26.0 or later
+    
+    <Tip>
+      During development, the app may not be code-signed. Use right-click > Open to bypass Gatekeeper.
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you have Container Kit installed and running:
+
+<CardGroup cols={2}>
+  <Card title="Container Management" icon="box" href="/guides/container-management">
+    Learn how to create, start, stop, and manage containers
+  </Card>
+  
+  <Card title="Image Management" icon="layer-group" href="/guides/image-management">
+    Pull, push, import, and export container images
+  </Card>
+  
+  <Card title="Networking" icon="network-wired" href="/guides/networking">
+    Configure container networks and DNS settings
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/guides/troubleshooting">
+    Solve common issues and errors
+  </Card>
+</CardGroup>
+
+<Note>
+  Need help? Join our [GitHub Discussions](https://github.com/etherCorps/ContainerKit/discussions) or check the [troubleshooting guide](/guides/troubleshooting).
+</Note>

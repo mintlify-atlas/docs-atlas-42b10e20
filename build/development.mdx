@@ -1,0 +1,202 @@
+---
+title: Development Build
+description: Set up and run Container Kit in development mode with hot reload
+---
+
+This guide covers running Container Kit in development mode with hot reload for rapid iteration.
+
+## Prerequisites
+
+Before starting development, ensure you have:
+
+- Node.js and pnpm installed
+- Rust and Tauri CLI configured
+- macOS 26.0 or later (for running the app)
+- Apple Container CLI downloaded
+
+## Initial Setup
+
+<Steps>
+  <Step title="Install dependencies">
+    Install all project dependencies using pnpm:
+
+    ```bash
+    pnpm install
+    ```
+  </Step>
+
+  <Step title="Download Apple Container CLI">
+    Download the required Apple Container CLI binaries:
+
+    ```bash
+    pnpm script:download-apple-container
+    ```
+
+    This script downloads and extracts the Apple Container CLI from GitHub releases to `src-tauri/binaries/sidecar/apple-container/`.
+  </Step>
+
+  <Step title="Generate database migrations">
+    Generate SQL migrations and Rust bindings:
+
+    ```bash
+    pnpm db:generate
+    ```
+
+    This command:
+    - Runs `drizzle-kit generate` to create SQL migration files
+    - Executes `generate-migrations.ts` to create Rust bindings in `src-tauri/migrations/`
+  </Step>
+</Steps>
+
+## Running Development Server
+
+Start the development server with hot reload:
+
+```bash
+pnpm tauri dev
+```
+
+This command:
+1. Runs `vite dev` to start the frontend development server on `http://localhost:1420`
+2. Launches the Tauri application with hot reload enabled
+3. Watches for file changes and automatically reloads
+
+### Alternative Development Commands
+
+Run only the Vite development server:
+
+```bash
+pnpm dev
+```
+
+## Development Workflow
+
+### Making Schema Changes
+
+When you update the database schema:
+
+<Steps>
+  <Step title="Update schema file">
+    Edit your schema in `src/lib/db/schema.ts`
+  </Step>
+
+  <Step title="Generate migrations">
+    ```bash
+    pnpm db:generate
+    ```
+  </Step>
+
+  <Step title="Restart dev server">
+    Restart the Tauri dev server to apply migrations:
+
+    ```bash
+    pnpm tauri dev
+    ```
+  </Step>
+</Steps>
+
+### Code Quality Checks
+
+Run type checking during development:
+
+```bash
+# One-time type check
+pnpm check
+
+# Continuous type checking
+pnpm check:watch
+```
+
+Format and lint your code:
+
+```bash
+# Format code with Prettier
+pnpm format
+
+# Check code formatting
+pnpm lint
+```
+
+## Development Build (Test)
+
+Create a development build for testing without full production optimizations:
+
+```bash
+pnpm tauri build
+```
+
+This creates a local build in `src-tauri/target/debug/` for testing purposes.
+
+## Troubleshooting
+
+### Build Issues
+
+If you encounter build errors, try cleaning and rebuilding:
+
+```bash
+# Remove build artifacts
+rm -rf node_modules .svelte-kit build
+
+# Reinstall dependencies
+pnpm install
+
+# Rebuild
+pnpm tauri dev
+```
+
+### Database Issues
+
+If migrations aren't applying correctly:
+
+```bash
+# Regenerate migrations
+pnpm db:generate
+
+# Remove local database and restart
+rm -f local.db
+pnpm tauri dev
+```
+
+### Tauri Configuration Check
+
+Verify your Tauri setup:
+
+```bash
+pnpm tauri info
+```
+
+This displays your system configuration, Rust version, and Tauri environment details.
+
+## Environment Variables
+
+For development, create a `.env` file in the project root:
+
+```bash
+DATABASE_URL=file:local.db
+```
+
+Signing and notarization variables are not required for development builds.
+
+## Project Structure
+
+Key directories during development:
+
+```
+ContainerKit/
+├── src/                    # Frontend source code
+│   └── lib/
+│       └── db/
+│           └── schema.ts   # Database schema
+├── src-tauri/
+│   ├── src/                # Rust backend code
+│   ├── migrations/         # Generated SQL migrations
+│   ├── binaries/          # Apple Container CLI
+│   └── tauri.conf.json    # Tauri configuration
+├── scripts/               # Build and setup scripts
+└── package.json          # npm scripts and dependencies
+```
+
+## Next Steps
+
+- [Production Build](/build/production) - Build for production deployment
+- [Code Signing](/build/code-signing) - Configure macOS code signing
