@@ -1,0 +1,112 @@
+{
+  "projectType": "saas",
+  "projectName": "Container Kit",
+  "projectDescription": "A modern desktop application for Apple container management on macOS",
+  "theme": "palm",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#60A5FA",
+  "darkColor": "#1E40AF",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/containers",
+              "features/images",
+              "features/volumes",
+              "features/networks",
+              "features/registry",
+              "features/dns",
+              "features/terminal"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/getting-started",
+              "guides/container-management",
+              "guides/image-management",
+              "guides/networking",
+              "guides/troubleshooting"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/architecture",
+              "advanced/database",
+              "advanced/security",
+              "advanced/performance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/contributing",
+              "development/setup",
+              "development/project-structure",
+              "development/scripts"
+            ]
+          },
+          {
+            "group": "Technical Reference",
+            "pages": [
+              "reference/tech-stack",
+              "reference/tauri-commands",
+              "reference/frontend-services",
+              "reference/database-schema"
+            ]
+          },
+          {
+            "group": "Build & Deploy",
+            "pages": [
+              "build/development",
+              "build/production",
+              "build/code-signing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Apple Container Management - Full GUI for Apple's container CLI on macOS 26.0+",
+    "Container Operations - Create, start, stop, remove, and inspect containers",
+    "Image Management - Pull, push, import, export, and manage container images",
+    "Built-in Terminal - Integrated xterm terminal with PTY support for advanced commands",
+    "Network & DNS - Advanced networking configuration and DNS management for containers",
+    "Registry Management - Configure and manage container registries and policies",
+    "Volume Management - Handle persistent storage for containers",
+    "Modern UI - Beautiful ShadCN-inspired interface with dark/light themes",
+    "Native macOS App - Built with Tauri 2.x for Apple Silicon (M1/M2/M3/M4)",
+    "Database Integration - SQLite with Drizzle ORM for state management",
+    "Data Visualization - Charts and graphs with LayerChart",
+    "Auto Updates - Built-in updater for seamless version management"
+  ],
+  "publicApiSurface": [
+    "Container Operations: getAllContainers, startContainer, stopContainer, removeContainer, inspectContainer, getContainerLogs",
+    "Image Operations: getAllImages, pullImage, removeImage, inspectImage, importImageFromTar, exportImageToTar",
+    "System Commands: execute_with_elevated_command (Rust/Tauri command)",
+    "Terminal: Built-in PTY terminal with tauri-pty integration",
+    "Database: Drizzle ORM with SQLite (migrations, schema management)",
+    "Frontend Components: Atomic design with atoms, molecules, organisms (Svelte 5)",
+    "Services: containerization, fs-events, sqlite, tray services",
+    "Build Scripts: db:generate, db:migrations:rust, tauri:build, download-apple-container-cli"
+  ]
+}
